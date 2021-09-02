@@ -88,7 +88,43 @@ def rotationA(theta, axis):
         # Fourth row
         [0,0,0,1]], dtype = np.float32)
 
+def rotationAxis(theta, point1, point2):
+    axis = point2-point1
+    axis = axis / np.linalg.norm(axis)
+    a,b,c = axis
+    h = np.sqrt(a**2 + c**2)
 
+    T = translate(-point1[0], -point1[1], -point1[2])
+    Tinv = translate(point1[0], point1[1], point1[2])
+
+    Ry = np.array([
+        [a/h, 0, c/h, 0],
+        [0,1,0,0],
+        [-c/h, 0, a/h, 0],
+        [0,0,0,1]], dtype=np.float32)
+    
+    Ryinv = np.array([
+        [a/h, 0, -c/h, 0],
+        [0,1,0,0],
+        [c/h, 0, a/h, 0],
+        [0,0,0,1]], dtype=np.float32)
+    
+    Rz = np.array([
+        [h, b, 0, 0],
+        [-b, h, 0, 0],
+        [0,0,1,0],
+        [0,0,0,1]], dtype=np.float32)
+    
+    Rzinv = np.array([
+        [h, -b, 0, 0],
+        [b, h, 0, 0],
+        [0,0,1,0],
+        [0,0,0,1]], dtype=np.float32)
+    
+    Rx = rotationX(theta)
+
+    return matmul([Tinv,Ryinv,Rzinv,Rx,Rz,Ry,T])
+    
 def translate(tx, ty, tz):
     return np.array([
         [1,0,0,tx],
