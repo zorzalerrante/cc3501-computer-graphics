@@ -132,10 +132,17 @@ def createScene(pipeline):
     glGenerateMipmap(GL_TEXTURE_2D)
     
     planeNode = sg.SceneGraphNode('plane')
+    planeNode.transform = tr.matmul([tr.translate(2.0, 0.0, 5.0), tr.rotationX(-np.pi/2)])
     planeNode.childs += [plane]
 
     scene = sg.SceneGraphNode('system')
     scene.childs += [planeNode]
+
+    for i in range(10):
+        node = sg.SceneGraphNode('plane'+str(i))
+        node.transform = tr.translate(0.0,0.0,-1.0*i)
+        node.childs += [planeNode]
+        scene.childs += [node]
 
     return scene
 
