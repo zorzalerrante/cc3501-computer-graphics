@@ -132,6 +132,23 @@ def createColorQuad(r, g, b):
 
     return Shape(vertices, indices)
 
+# Tarea4: Nueva función para generar un cuadrado texturado con normales
+def createTextureQuadWithNormal(nx, ny):
+    # Defining locations and texture coordinates for each vertex of the shape    
+    vertices = [
+    #   positions        texture  normal
+        -0.5, -0.5, 0.0,  0, ny, 0.0, 0.0, 1.0,
+         0.5, -0.5, 0.0, nx, ny, 0.0, 0.0, 1.0,
+         0.5,  0.5, 0.0, nx, 0,  0.0, 0.0, 1.0,
+        -0.5,  0.5, 0.0,  0, 0,  0.0, 0.0, 1.0]
+
+    # Defining connections among vertices
+    # We have a triangle every 3 indices specified
+    indices = [
+         0, 1, 2,
+         2, 3, 0]
+
+    return Shape(vertices, indices)
 
 def createTextureQuad(nx, ny):
 
