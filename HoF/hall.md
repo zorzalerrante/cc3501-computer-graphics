@@ -1,4 +1,6 @@
 # Homework 2
+**Goal**: To model a 3D object with a scene graph and four primitives (cone, cube, cylinder and sphere)
+
 ### Acrobacy
 <img src="acrobacy2.gif" alt="beach"
 	height="300" />
@@ -61,6 +63,7 @@
 
 
 # Homework 1
+**Goal:** Design a checker board with 2D OpenGL
 
 ### Beach style
 <img src="beach.png" alt="beach"
