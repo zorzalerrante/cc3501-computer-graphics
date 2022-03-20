@@ -5,6 +5,7 @@ Instalación de python y librerias en Windows
 En windows, python no viene instalado por defecto, y a pesar de ser posible instalar python y librerías de versiones específicas de librerías manualmente, no es recomendado por el trabajo que implica.
 
 Algunas observaciones:
+
 - Python se puede instalar a nivel de sistema o a nivel de usuario.
 - Ej: Algunos programas pueden usar una versión dedicada e interna de Python.
 - Es posible instalar muchas versiones de python en un mismo sistema. La versión que se desea mantener disponible para otras aplicaciones debe mantenerse en el path de sistema o del usuario.
@@ -19,7 +20,6 @@ Vamos a ofrecer dos posibilidades, utilizando Anaconda y utilizando Python nativ
 
 Si por determinadas razones, tienen problemas con la instalación de Anaconda, pueden intentar con una instalación de Python nativo. Esto también funcionará, pero el manejo de distintas versiones de python se deberá realizar de forma manual. También se requerirá esfuerzo adicional para mantener dependencias externas a python (archivos .dll). El día de mañana, podría requerir una nueva librería, que quizá sea incompatible con otra, por lo que al instalarla, pueden dejar de funcionar sus programas antiguos.
 
-
 ---
 
 ## Instalando Anaconda (Recomendado)
@@ -30,8 +30,7 @@ Primero descargue e instale anaconda python versión 3.8 en https://www.anaconda
 
 ![Descarga](./captures/captura3.jpg)
 
- Marque la segunda opción y termine la instalación
-
+Marque la segunda opción y termine la instalación
 
 ![instalacion](./captures/captura4.jpg)
 
@@ -45,7 +44,6 @@ Ahora necesita trabajar con la terminal de Anaconda "Anaconda Prompt" escribiend
 Donde se abrirá una terminal como la que se muestra
 
 ![terminal](./captures/captura6.jpg)
-
 
 En dicha terminal creamos un environment ejecutando:
 
@@ -71,31 +69,29 @@ Si comete algún error, puede eliminar un environment y todas sus librerias con
 
 y luego realizar una nueva configuración.
 
-
 Instalando las librerías necesarias
 -----------------------------------
 
 Regrese al environment python-cg, una vez ahí ejecute el siguiente comando para ver si está instalado pip:
 
     pip
-    
+
 Si no arroja error o no encontrado puede seguir, de lo contrario tiene que instalar pip con el comando:
 
     conda install pip
-    
+
 Ahora si puede instalar las librerías:
 
     pip install numpy scipy matplotlib pyopengl glfw ipython jupyter pillow imgui[glfw]
 
 Es posible que se le pida actualizar algunas dependencias, ingrese 'y' para aceptar.
 
-
 # Python Nativo (Si el método anterior no funciona)
 
 Si usted ya tenía Python instalado con Anaconda y tuvo problemas, seguramente se trata de un problema con las variables de entorno. En ese caso, usted querrá desinstalar Python en conjunto con Anaconda. Haga esto manualmente.
 
 Ahora, deberá instalar Python para que se agregue a sus variables de entorno:
- 
+
 Descargar e instalar la última versión estable de Python para Windows desde https://www.python.org/downloads/windows/ segun el procesador de su computador (32 o 64 bits).
 
 ![Descarga](./captures/captura0.jpg)
@@ -104,10 +100,9 @@ Luego abra el ejecutable y realice la instalación, donde es importante que aña
 
 ![path](./captures/captura1.jpg)
 
-Una vez instalado, asegúrese de que python funciona. Abra alguna terminal de windows (windows-> buscar o ejecutar -> cmd). 
+Una vez instalado, asegúrese de que python funciona. Abra alguna terminal de windows (windows-> buscar o ejecutar -> cmd).
 
 ![cmd](./captures/captura8.jpg)
-
 
 Luego escriba en la terminal
 
@@ -133,5 +128,5 @@ En la terminal. Si se despliega un menú con opciones, está todo bien. Si no fi
 Ahora sí debería tener pip, proceda a escribir
 
     pip install numpy scipy matplotlib pyopengl glfw ipython jupyter pillow imgui[glfw]
- 
+
 Y ahora debería poder correr todos los programas normalmente.

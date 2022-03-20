@@ -5,6 +5,7 @@
 Visual Studio Code es un editor de código fuente gratuito y de código abierto, compatible con una multitud de lenguajes de programación y herramientas mediante la instalación de extensiones, además de características bastantes útiles en la práctica como control de git, refactorización, finalización inteligente de código y soporte para debuggear/depurar como se verá al final de este documento.
 
 ## ¿Es necesario?
+
 No, podría usar el terminal y un editor de texto para trabajar en sus tareas, pero es altamente recomendable usar un editor de texto para agilizar el proceso de escribir código e ir probando el resultado de su código. Se recomienda en particular este IDE ya que es el que utiliza el cuerpo docente y por lo tanto es el que se verá en clases, pero podría usar cualquier otro como PyCharm o Spyder si tiene experiencia
 
 ## Instalación en Windows
@@ -26,7 +27,7 @@ Ahora tiene que abrir una carpeta donde tenga algun codigo de python
 ![Abrir carpeta](./captures/captura12.jpg)
 
 Si realizo la instalacion de librerias con python nativo (No recomendado) el intérprete es el que viene por defecto, por lo que ya está configurado, si usa anaconda, seleccione el intérprete de la siguiente manera:
- 
+
 1. Seleccione un archivo python
 2. Espere a que el programa termine de detectar el lenguaje y presione la barra azul en la esquina inferior izquierda
 3. Seleccione el intérprete del environment que creó con Anaconda
@@ -43,6 +44,7 @@ Preste atención en el terminal que se muestra al ejecutar el código, debería 
 ![terminal](./captures/captura15.jpg)
 
 En caso contrario trate de cambiar el terminal donde está señalando la flecha a cmd/python/conda si solo sale powershell realice lo siguiente:
+
 - Cierre visual studio Code
 - Abra Anaconda Prompt
 - Active su environment
@@ -55,8 +57,6 @@ En caso contrario trate de cambiar el terminal donde está señalando la flecha 
 Por último si sale el mensaje de que linter no está instalado, seleccione ``install`` y luego elija la opción de instalar con pip.
 
 ![linter](./captures/captura261.jpg)
-
-
 
 # Instalacion en Linux
 
@@ -77,6 +77,7 @@ Abre la carpeta donde se encuentre los codigos a ejecutar
 ![Descarga](./captures/captura21.jpg)
 
 De la misma manera que con windows, ahora tiene que elegir el intérprete:
+
 1. Seleccione un archivo python
 2. Espere el análisis y apriete la barra en la esquina inferior izquierda
 3. Lo mas probable es que no se vea el intérprete instalado, por lo que toca buscar el path

@@ -53,7 +53,6 @@ Si no funciona puede crear directamente la carpeta con el environment, ejecutand
 
     python3 -m venv python-cg
 
-
 Instalando librerías
 --------------------
 
@@ -67,7 +66,7 @@ Puede probar que la versión de python activa es la que se encuentra en su envir
 
     which python
 
-La respuesta debiera ser 
+La respuesta debiera ser
 
     /home/[username]/python-cg/bin/python
 
@@ -75,7 +74,7 @@ También verifique pip, con:
 
     which pip
 
-La respuesta debiera ser 
+La respuesta debiera ser
 
     /home/[username]/python-cg/bin/pip
 

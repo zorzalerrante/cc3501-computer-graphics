@@ -74,7 +74,6 @@ Si no funciona puede crear directamente la carpeta con el environment, ejecutand
 
     python3 -m venv python-cg
 
-
 Instalando librerías
 --------------------
 
@@ -88,7 +87,7 @@ Puede probar que la versión de python activa es la que se encuentra en su envir
 
     which python
 
-La respuesta debiera ser 
+La respuesta debiera ser
 
     /home/[username]/python-cg/bin/python
 
@@ -96,7 +95,7 @@ También verifique pip, con:
 
     which pip
 
-La respuesta debiera ser 
+La respuesta debiera ser
 
     /home/[username]/python-cg/bin/pip
 
@@ -109,7 +108,6 @@ Ahora instalamos todas las librerias python requeridas
     pip install numpy scipy matplotlib ipython jupyter pyopengl glfw pillow
 
 Siempre es posible instalar cada librería por separado.
-
 
 Arreglar glfw
 --------------------
@@ -128,5 +126,4 @@ Para que todos los programas corran correctamente debera agregar el siguiente bl
     [ 1182 ] window_hint(OPENGL_FORWARD_COMPAT, True)
     [ 1183 ] window_hint(OPENGL_PROFILE, OPENGL_CORE_PROFILE)
 
-al archivo ~/pythoncg/lib/python3.9/site-packages/glfw/__init__.py
-
+al archivo ~/pythoncg/lib/python3.9/site-packages/glfw/\_\_init\_\_.py

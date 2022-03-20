@@ -8,10 +8,8 @@ Primero debe descargar los archivos y códigos que se usarán en el curso, para 
 
 Pero si cuenta con el sistema de control de versiones Git instalado, es preferible que haga ``git clone`` del repositorio
 
-
-
 Probando la instalación
-=======
+=======================
 
 Ya sea en Windows o Linux, en una terminal con el environment de python activo, abra el directorio de los archivos .py que usted desea ejecutar desde la terminal con el comando
 
@@ -23,8 +21,8 @@ Luego ejecute algunos de los archivos de ejemplo disponibles la carpeta examples
 
     python ex_color_palette.py 
 
- Imagen de Santiago con dos paletas de colores distintas vía matplotlib
- 
+Imagen de Santiago con dos paletas de colores distintas vía matplotlib
+
 ---
 
     python ex_delaunay.py 
@@ -46,7 +44,8 @@ Triángulo con degradación de colores utilizando opengl y glfw
 Si pudo ejecutar y visualizar todos los programas anteriores ¡Felicitaciones! ya tiene todo lo necesario para trabajar los contenidos del curso.
 
 Observación:
-=======================
+============
+
 Para ejecutar archivos "jupyter notebooks", debe ir a la terminal y escribir:
 
     jupyter notebooks
