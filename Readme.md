@@ -1,5 +1,8 @@
+# The Hall of Fame 2022
+In [this](./HoF2022/hall.md) page, you can find the several renderings from the student's homeworks.
 
-# **New:** The Hall of Fame
+
+# The Hall of Fame 2021
 In [this](./HoF/hall.md) page, you can find the several renderings from the student's homeworks.
 
 # Computer Graphics with OpenGL and Python
