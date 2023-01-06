@@ -32,7 +32,7 @@ rainbow_triangle_vertices = [
 ]
 triangle_vertices = [0, 1, 2]
 
-# Creating shapes on GPU memory6
+# Creating shapes on GPU memory
 rainbow_quad_vertices = [
    # x   y    r    g    b
     0,   0,  1.0, 0.0, 0.0,
@@ -46,12 +46,15 @@ quad_vertices = [
 ]
 
 batch = pyglet.graphics.Batch()
+
+# Position each shape in a different quarter of the screen
 shape_triangle1 = CustomShape2D(
     vertices=rainbow_triangle_vertices,
     indices=triangle_vertices,
     batch=batch,
 )
 shape_triangle1.position = (WIDTH * 0.5, 100.0)
+
 shape_triangle2 = CustomShape2D(
     vertices=rainbow_triangle_vertices,
     indices=triangle_vertices,

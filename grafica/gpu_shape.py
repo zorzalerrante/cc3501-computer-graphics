@@ -68,4 +68,16 @@ class GPUShape:
 
         if self.vao != None:
             glDeleteVertexArrays(1, [self.vao])
-        
+
+
+def createGPUShape(pipeline, shape):
+    """Shortcut for the typical way to create a GPUShape.
+    Please consider that GL_STATIC_DRAW is not always the best way to draw.
+    You should also know what setupVAO and fillBuffers do in a low level,
+    in case you want to implement something new, like two textures,
+    bump mapping, alternative ways to represent of vertices, etc.
+    """
+    gpuShape = GPUShape().initBuffers()
+    pipeline.setupVAO(gpuShape)
+    gpuShape.fillBuffers(shape.vertices, shape.indices, GL_STATIC_DRAW)
+    return gpuShape

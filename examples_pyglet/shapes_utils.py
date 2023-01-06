@@ -4,20 +4,25 @@ import sys
 import os.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import grafica.transformations as tr
-from grafica.easy_shaders import GPUShape 
-from grafica.basic_shapes import Shape
-
-# Creating shapes on GPU memory
-def createGPUShape(pipeline, shape):
-    gpuShape = GPUShape().initBuffers()
-    pipeline.setupVAO(gpuShape)
-    gpuShape.fillBuffers(shape.vertices, shape.indices, GL_STATIC_DRAW)
-    return gpuShape
+import grafica.basic_shapes as bs
+from grafica.gpu_shape import createGPUShape
 
 
 class HighLevelGPUShape:
+    """
+    This GPUShape allows to apply transformation very easily, by just changing
+    properties such as rotation, translation or scale.
+    Example:
 
-    def __init__(self, pipeline, shape: Shape):
+    pipeline = es.SimpleTransformShaderProgram()
+    gpuTriangle = HighLevelGPUShape(pipeline, bs.createRainbowTriangle())
+    gpuQuad.scale = tr.uniformScale(0.8)
+    gpuQuad.translation = tr.translate(0.5, 0.5, 0.0)
+    gpuQuad.draw(pipeline)
+    
+    The given pipeline must have an uniform mat4 value called transform.
+    """
+    def __init__(self, pipeline, shape: bs.Shape):
         self._rotation = tr.identity()
         self._translation = tr.identity()
         self._scale = tr.identity()
@@ -26,7 +31,7 @@ class HighLevelGPUShape:
 
     def _update_transform(self):
         self._transform = self._translation @ self._rotation @ self._scale
-    
+
     @property
     def translation(self):
         return self._translation
@@ -54,10 +59,10 @@ class HighLevelGPUShape:
         self._rotation = value
         self._update_transform()
 
-    def draw(self, pipeline):
+    def draw(self, pipeline, transform_shader_param="transform"):
         # TODO: assert that pipeline has transform uniform
         glUniformMatrix4fv(
-            glGetUniformLocation(pipeline.shaderProgram, "transform"),
+            glGetUniformLocation(pipeline.shaderProgram, transform_shader_param),
             1,
             GL_TRUE,
             self._transform,
