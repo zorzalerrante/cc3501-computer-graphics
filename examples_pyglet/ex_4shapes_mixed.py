@@ -26,16 +26,6 @@ class Controller(pyglet.window.Window):
 # We will use the global controller as communication with the callback function
 WIDTH, HEIGHT = 1280, 800
 controller = Controller(width=WIDTH, height=HEIGHT)
-
-# What happens when the user presses these keys
-@controller.event
-def on_key_press(symbol, modifiers):
-    if symbol == pyglet.window.key.SPACE:
-        controller.fillPolygon = not controller.fillPolygon
-    elif symbol == pyglet.window.key.ESCAPE:
-        controller.close()
-
-
 # Setting up the clear screen color
 glClearColor(0.15, 0.15, 0.15, 1.0)
 
@@ -82,6 +72,13 @@ def draw_rotating_triangle(controller: Controller):
     gpuTriangle.scale = tr.uniformScale(0.3)
     gpuTriangle.draw(controller.pipeline)
 
+# What happens when the user presses these keys
+@controller.event
+def on_key_press(symbol, modifiers):
+    if symbol == pyglet.window.key.SPACE:
+        controller.fillPolygon = not controller.fillPolygon
+    elif symbol == pyglet.window.key.ESCAPE:
+        controller.close()
 
 @controller.event
 def on_draw():
