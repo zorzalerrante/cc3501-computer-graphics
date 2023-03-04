@@ -5,7 +5,7 @@ from OpenGL.GL import *
 
 import numpy as np
 import sys, os.path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import grafica.basic_shapes as bs
 import grafica.easy_shaders as es
@@ -33,7 +33,6 @@ class Controller(pyglet.window.Window):
         
         self.quads = np.zeros(shape=(rows, columns, 3), dtype=float)
         self.gpuQuads = np.zeros(shape=(rows, columns), dtype=es.GPUShape)
-        self.update_colors()
         self.set_random_colors()
         self.update_colors()
    
@@ -73,7 +72,25 @@ class Controller(pyglet.window.Window):
                 self.pipeline.drawCall(self.gpuQuads[i, j])
 
     def set_color_for_quad(self, i, j, r, g, b):
-        self.quads[i, j, :] = r, g, b 
+        self.quads[i, j, :] = r, g, b
+
+    def __getitem__(self, index):
+        """ Index should be of the type (0, 1) or [0, 1]
+        So this object is accessed with controller[0, 0]
+        """
+        try:
+            assert(type(index[0]) == int and index[1] == int)
+            return self.quads[index[0]], [index[1]]
+
+        except AssertionError:
+            raise("Indexes must be two integers")
+
+    def __setitem__(self, index, value):
+        """ Index should be of the type (0, 1) or [0, 1]
+        So this object is accessed with controller[0, 0]
+        """
+        r, g, b = value
+        self.quads[index[0], index[1], :] = r, g, b
 
     ## EVENTS ##
 
