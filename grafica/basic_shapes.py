@@ -168,6 +168,23 @@ def createTextureQuad(nx, ny):
 
     return Shape(vertices, indices)
 
+def createTextureQuadWithDims(nx, ny, height, width):
+
+    # Defining locations and texture coordinates for each vertex of the shape    
+    vertices = [
+    #   positions        texture
+        width * -0.5, -height * 0.5, 0.0,  0, ny,
+        width * 0.5, -height * 0.5, 0.0, nx, ny,
+        width * 0.5,  height * 0.5, 0.0, nx, 0,
+        width * -0.5,  height * 0.5, 0.0,  0, 0]
+
+    # Defining connections among vertices
+    # We have a triangle every 3 indices specified
+    indices = [
+         0, 1, 2,
+         2, 3, 0]
+
+    return Shape(vertices, indices)
 
 def createColorCircle(N, r, g, b):
 

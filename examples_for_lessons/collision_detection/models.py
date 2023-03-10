@@ -1,5 +1,4 @@
 import pyglet
-from pyglet.window import key
 
 from OpenGL.GL import *
 
@@ -13,7 +12,6 @@ from collections import deque  # to allow use of double linked lists
 
 import grafica.basic_shapes as bs
 import grafica.easy_shaders as es
-import grafica.transformations as tr
 from grafica.assets_path import getAssetPath
 
 
@@ -25,14 +23,26 @@ class GameState:
     """Class to keep track of the current game State. Such as the current player, the models,
     total time played, etc.
     """
-    camera_position = 0.0
-    total_time_played = 0.0
-    player: 'Player' = None
-    obstacle_manager: 'ObstacleManager' = None
+
+    def __init__(self):
+        self.obstacle_manager: 'ObstacleManager' = None
+        self.player: 'Player' = None # (x=-0.8)
+        self.camera_position = 0.0
+        self.total_time_played = 0.0
 
     def update(self, dt: float):
         self.camera_position = self.player.x
         self.total_time_played += dt
+
+    def on_lost_game(self):
+        print("Collision! You lost!")
+
+    def set_gpu_shapes_of_obstacles(self, current_pipeline: es.SimpleTextureTransformShaderProgram):
+        self.obstacle_manager.set_gpu_shapes_of_obstacles(current_pipeline)
+
+
+# we will import this variable and use it as singleton
+game_state = GameState()
 
 
 class ObstacleManager:
@@ -40,11 +50,9 @@ class ObstacleManager:
     and that the player can always pass through."""
 
     obstacles: deque = deque()
-    X_DISTANCE_BETWEEN_OBSTACLES_STD = 0.3
+    X_DISTANCE_BETWEEN_OBSTACLES_STD = 0.4
     FIRST_OBSTACLE_OFFSET_IN_X = 0.8
 
-
-    @classmethod
     def __new__(cls):
         """ This function makes sure we always get the same instance of ObstacleManager.
         Even when trying to create a new one. This is useful since we do not need to keep
@@ -55,11 +63,6 @@ class ObstacleManager:
         return cls.instance
 
     @classmethod
-    def add_new_obstacle(cls, obstacle: 'Obstacle'):
-        cls.obstacles.append(obstacle)
-        cls._set_random_position(obstacle)
-
-    @classmethod
     def _set_random_position(cls, curr_obstacle: 'Obstacle'):
         """
         Supposing each obstacle is added from left to right. Then try to add this 
@@ -68,8 +71,8 @@ class ObstacleManager:
         a new obstacle- Since these methods will be called during runtime, these
         functions need to be efficient.
         """
-        if len(cls.obstacles <= 0):
-            cls._simple_set_obstacle_at_the_right_of_player()
+        if len(cls.obstacles) <= 0:
+            cls._simple_set_obstacle_at_the_right_of_player(curr_obstacle)
 
         else:
             last_positioned_obstacle = cls.obstacles[-1]
@@ -77,20 +80,25 @@ class ObstacleManager:
             # We will consider a standard deviation of 0.3 to make sure all
             # obstacles are near each other
             std_sigma = cls.X_DISTANCE_BETWEEN_OBSTACLES_STD
-            curr_obstacle.x = last_positioned_obstacle.x + abs(np.random.randn(1) * std_sigma)
+            curr_obstacle.x = last_positioned_obstacle.x + abs(np.random.randn() * std_sigma)
             
             # We need to make sure that this element does not overlap with the last one
             # So we reallocate it recursively until they do not overlap anymore
             while cls._obstacles_do_overlap(curr_obstacle, last_positioned_obstacle):
-                std_sigma = std_sigma * 0.5
-                curr_obstacle.x = last_positioned_obstacle.x + abs(np.random.randn(1) * std_sigma)
+                std_sigma = max(std_sigma * 0.8, 0.1)
+                curr_obstacle.x = curr_obstacle.x + abs(np.random.randn() * std_sigma)
+
+
+    @classmethod
+    def add_new_obstacle(cls, obstacle: 'Obstacle'):
+        cls._set_random_position(obstacle)
+        cls.obstacles.append(obstacle)
 
 
     @classmethod
     def _simple_set_obstacle_at_the_right_of_player(cls, curr_obstacle: 'Obstacle'):
         # just add it to the right of the player before the player can see it
-        gameState = GameState()
-        player_position_x = gameState.player.x
+        player_position_x = game_state.player.x
         curr_obstacle.x = player_position_x + cls.FIRST_OBSTACLE_OFFSET_IN_X
         cls.obstacles.append(curr_obstacle)
 
@@ -101,17 +109,28 @@ class ObstacleManager:
 
         obs1_at_the_left = obs1.x <= obs2.x
         if obs1_at_the_left:
-            x_overlap = obs1.higher_x_bound >= obs2.lower_x_bound
+            x_overlap = obs1.higher_x_bound < obs2.lower_x_bound
         else:
-            x_overlap = obs1.higher_x_bound <= obs2.lower_x_bound
+            x_overlap = obs1.higher_x_bound > obs2.lower_x_bound
         
         obs1_on_top = obs1.y >= obs2.y
         if obs1_on_top:
-            y_overlap = obs1.lower_y_bound >= obs2.higher_y_bound
+            y_overlap = obs1.lower_y_bound < obs2.higher_y_bound
         else:
-            y_overlap = obs1.lower_y_bound <= obs2.higher_y_bound
+            y_overlap = obs1.lower_y_bound > obs2.higher_y_bound
 
         return x_overlap and y_overlap
+
+    @classmethod
+    def generate_obstacles(cls, num_of_obstacles_to_generate: int):
+        for _ in range(num_of_obstacles_to_generate):
+            new_obstacle = Obstacle()
+            cls.add_new_obstacle(new_obstacle)
+
+    @classmethod
+    def set_gpu_shapes_of_obstacles(cls, current_pipeline: es.SimpleTextureTransformShaderProgram):
+        for obstacle in cls.obstacles:
+            obstacle.set_gpu_shape(current_pipeline)
 
 
 class CollisionObject:
@@ -145,8 +164,31 @@ class Player(CollisionObject):
         super().__init__(x, y, lower_x_bound, higher_x_bound, lower_y_bound, higher_y_bound)
         self.speed = speed
         self._is_in_air = False
+        self.is_colliding = False
+        self.game_state = None
 
     def update(self, dt, controller):
+        self._update_colliding_state()
+        self._update_position_and_speed(dt, controller)
+
+
+    def _update_colliding_state(self):
+        obstacle_manager = ObstacleManager()
+        # This may be a slow operation, so its better to do it with list
+        # comprehension, this may save computing time
+        collisions = [
+            self.is_colliding_with_object(obstacle) for obstacle in obstacle_manager.obstacles
+        ]
+        if any(collisions):
+            self.is_colliding = True
+            self.notify_has_collided()
+
+    def notify_has_collided(self):
+        # TODO: add sound notification
+        self.game_state.on_lost_game()
+
+
+    def _update_position_and_speed(self, dt, controller):
         # Assuming linear speed
         self.x += self.speed[0] * dt
         self.y += self.speed[1] * dt
@@ -164,10 +206,10 @@ class Player(CollisionObject):
 
         # Always fall, until the ground is found
         self.y = max(self.y + self.speed[1] * dt, GROUND_Y_LEVEL)
-        
+
 
     def set_gpu_shape(self, pipeline):
-        shape_player = bs.createTextureQuad(1,1)
+        shape_player = bs.createTextureQuadWithDims(1,1, 0.2, 0.2)
         self.gpu_player = es.GPUShape().initBuffers()
         pipeline.setupVAO(self.gpu_player)
         self.gpu_player.fillBuffers(shape_player.vertices, shape_player.indices, GL_STATIC_DRAW)
@@ -179,16 +221,22 @@ DESTRUCT_OFFSET_IN_X = 1.0
 
 class Obstacle(CollisionObject):
 
-    def __init__(self, x, y, lower_x_bound, higher_x_bound, lower_y_bound, higher_y_bound):
+    def __init__(self, x=0.0, y=0.0, lower_x_bound=0.0, higher_x_bound=0.0, lower_y_bound=0.0, higher_y_bound=0.0):
         super().__init__(x, y, lower_x_bound, higher_x_bound, lower_y_bound, higher_y_bound)
-        ObstacleManager.obstacles.append(self)
-        ObstacleManager.set_random_position(self)
+        # ObstacleManager.add_new_obstacle(self)
+        self.gpu_obstacle : es.GPUShape = None
+        
 
-    def render(self):
-        pass
+    def set_gpu_shape(self, pipeline, asset_path="bricks.jpg"):
+        shape_obstacle = bs.createTextureQuadWithDims(1, 1, 0.2, 0.2)
+        self.gpu_obstacle = es.GPUShape().initBuffers()
+        pipeline.setupVAO(self.gpu_obstacle)
+        self.gpu_obstacle.fillBuffers(shape_obstacle.vertices, shape_obstacle.indices, GL_STATIC_DRAW)
+        self.gpu_obstacle.texture = es.textureSimpleSetup(
+            getAssetPath(asset_path), GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST)
 
 
-    def check_for_destroy(self):
-        """ Checks whether this object should be destroyed to save memory"""
-        if self.x <= GameState.camera_position - DESTRUCT_OFFSET_IN_X:
-            del self
+    # def check_for_destroy(self):
+    #     """ Checks whether this object should be destroyed to save memory"""
+    #     if self.x <= game_state.camera_position - DESTRUCT_OFFSET_IN_X:
+    #         del self

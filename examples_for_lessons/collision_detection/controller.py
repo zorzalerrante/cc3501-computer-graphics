@@ -24,7 +24,7 @@ class Controller(pyglet.window.Window):
         glUniformMatrix4fv(glGetUniformLocation(pipeline.shaderProgram, shader_param_name), 1, GL_TRUE, transform_matrix)
 
     def render_obstacle(self, pipeline, obstacle):
-        GPUShape = obstacle.GPUShape
+        GPUShape = obstacle.gpu_obstacle
         translation = tr.translate(obstacle.x, obstacle.y, 0.0)
         self.apply_transform(pipeline, translation)
         pipeline.drawCall(GPUShape)
@@ -51,3 +51,5 @@ class Controller(pyglet.window.Window):
             self.render_obstacle(self.current_pipeline, obstacle)
 
         self.render_player(self.current_pipeline, self.game_state.player)
+
+
