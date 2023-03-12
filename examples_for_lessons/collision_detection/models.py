@@ -12,12 +12,14 @@ from collections import deque  # to allow use of double linked lists
 
 import grafica.basic_shapes as bs
 import grafica.easy_shaders as es
+
+
 from grafica.assets_path import getAssetPath
+from moving_shader import MovingShader2D
+from globals import Constants
 
 
-GROUND_Y_LEVEL = -0.8
-INITIAL_JUMP_SPEED_IN_Y = 0.3
-GRAVITY = 0.2
+
 
 class GameState:
     """Class to keep track of the current game State. Such as the current player, the models,
@@ -29,15 +31,18 @@ class GameState:
         self.player: 'Player' = None # (x=-0.8)
         self.camera_position = 0.0
         self.total_time_played = 0.0
+        self.paused = False
 
     def update(self, dt: float):
+        if self.paused:
+            dt = 0.0
         self.camera_position = self.player.x
         self.total_time_played += dt
 
     def on_lost_game(self):
         print("Collision! You lost!")
 
-    def set_gpu_shapes_of_obstacles(self, current_pipeline: es.SimpleTextureTransformShaderProgram):
+    def set_gpu_shapes_of_obstacles(self, current_pipeline: MovingShader2D):
         self.obstacle_manager.set_gpu_shapes_of_obstacles(current_pipeline)
 
 
@@ -52,6 +57,7 @@ class ObstacleManager:
     obstacles: deque = deque()
     X_DISTANCE_BETWEEN_OBSTACLES_STD = 0.4
     FIRST_OBSTACLE_OFFSET_IN_X = 0.8
+    
 
     def __new__(cls):
         """ This function makes sure we always get the same instance of ObstacleManager.
@@ -88,6 +94,9 @@ class ObstacleManager:
                 std_sigma = max(std_sigma * 0.8, 0.1)
                 curr_obstacle.x = curr_obstacle.x + abs(np.random.randn() * std_sigma)
 
+            if curr_obstacle.x + cls.X_DISTANCE_BETWEEN_OBSTACLES_STD >= last_positioned_obstacle.x:
+                curr_obstacle.x += 0.2
+
 
     @classmethod
     def add_new_obstacle(cls, obstacle: 'Obstacle'):
@@ -109,15 +118,15 @@ class ObstacleManager:
 
         obs1_at_the_left = obs1.x <= obs2.x
         if obs1_at_the_left:
-            x_overlap = obs1.higher_x_bound < obs2.lower_x_bound
+            x_overlap = obs1.x + obs1.higher_x_bound < obs2.lower_x_bound + obs2.x
         else:
-            x_overlap = obs1.higher_x_bound > obs2.lower_x_bound
+            x_overlap = obs1.x + obs1.higher_x_bound > obs2.lower_x_bound + obs2.x
         
         obs1_on_top = obs1.y >= obs2.y
         if obs1_on_top:
-            y_overlap = obs1.lower_y_bound < obs2.higher_y_bound
+            y_overlap = obs1.y + obs1.lower_y_bound < obs2.higher_y_bound + obs2.y
         else:
-            y_overlap = obs1.lower_y_bound > obs2.higher_y_bound
+            y_overlap = obs1.y + obs1.lower_y_bound > obs2.higher_y_bound + obs2.y
 
         return x_overlap and y_overlap
 
@@ -128,12 +137,18 @@ class ObstacleManager:
             cls.add_new_obstacle(new_obstacle)
 
     @classmethod
-    def set_gpu_shapes_of_obstacles(cls, current_pipeline: es.SimpleTextureTransformShaderProgram):
+    def set_gpu_shapes_of_obstacles(cls, current_pipeline: MovingShader2D):
         for obstacle in cls.obstacles:
             obstacle.set_gpu_shape(current_pipeline)
 
 
-class CollisionObject:
+class Point2D:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
+class RectangleCollisionObject:
 
     def __init__(self, x, y, lower_x_bound, higher_x_bound, lower_y_bound, higher_y_bound):
         self.x = x
@@ -143,31 +158,39 @@ class CollisionObject:
         self.lower_y_bound = lower_y_bound
         self.higher_y_bound = higher_y_bound
 
+
     def is_colliding_with_object(self, other: 'CollisionObject') -> bool:
         # This implementation does not consider width or height of the current object
         # Check that self.x is in the range []
-        collides_in_x = other.lower_x_bound <= self.x - other.x <= other.higher_x_bound
-        collides_in_y = other.lower_y_bound <= self.y - other.y <= other.higher_y_bound
+        collides_in_x = other.x - other.lower_x_bound <= self.x <= other.x + other.higher_x_bound
+        collides_in_y = other.y - other.lower_y_bound <= self.y <= other.y + other.higher_y_bound
         if collides_in_x and collides_in_y:
             return True
         return False
+ 
 
+class Player(RectangleCollisionObject):
 
-class Player(CollisionObject):
-
-    def __init__(self, x, y=GROUND_Y_LEVEL):
-        lower_x_bound = 0.1
-        higher_x_bound = 0.1
-        lower_y_bound = 0.1
-        higher_y_bound = 0.1
-        speed = [0.1, 0.0]
+    def __init__(
+            self,
+            x,
+            y=Constants.GROUND_Y_LEVEL,
+            lower_x_bound = 0.1,
+            higher_x_bound = 0.1,
+            lower_y_bound = 0.1,
+            higher_y_bound = 0.1,
+            speed = [0.1, 0.0],
+            game_state = None,
+        ):
         super().__init__(x, y, lower_x_bound, higher_x_bound, lower_y_bound, higher_y_bound)
         self.speed = speed
+        self.game_state = game_state
         self._is_in_air = False
         self.is_colliding = False
-        self.game_state = None
 
     def update(self, dt, controller):
+        if self.game_state.paused:
+            dt = 0.0
         self._update_colliding_state()
         self._update_position_and_speed(dt, controller)
 
@@ -194,18 +217,18 @@ class Player(CollisionObject):
         self.y += self.speed[1] * dt
         if controller.jump_action_queued and not self._is_in_air:
             # Start jumping
-            self.speed[1] = INITIAL_JUMP_SPEED_IN_Y
+            self.speed[1] = Constants.INITIAL_JUMP_SPEED_IN_Y
             self._is_in_air = True
             controller.jump_action_queued = False
 
         if self._is_in_air:
-            self.speed[1] = self.speed[1] - GRAVITY * dt 
-            self._is_in_air = True if self.y >= GROUND_Y_LEVEL else False
+            self.speed[1] = self.speed[1] - Constants.GRAVITY * dt 
+            self._is_in_air = True if self.y >= Constants.GROUND_Y_LEVEL else False
         else:
             self.speed[1] = 0.0
 
         # Always fall, until the ground is found
-        self.y = max(self.y + self.speed[1] * dt, GROUND_Y_LEVEL)
+        self.y = max(self.y + self.speed[1] * dt, Constants.GROUND_Y_LEVEL)
 
 
     def set_gpu_shape(self, pipeline):
@@ -219,9 +242,9 @@ class Player(CollisionObject):
 
 DESTRUCT_OFFSET_IN_X = 1.0
 
-class Obstacle(CollisionObject):
+class Obstacle(RectangleCollisionObject):
 
-    def __init__(self, x=0.0, y=0.0, lower_x_bound=0.0, higher_x_bound=0.0, lower_y_bound=0.0, higher_y_bound=0.0):
+    def __init__(self, x=0.0, y=Constants.GROUND_Y_LEVEL, lower_x_bound=0.1, higher_x_bound=0.1, lower_y_bound=0.1, higher_y_bound=0.1):
         super().__init__(x, y, lower_x_bound, higher_x_bound, lower_y_bound, higher_y_bound)
         # ObstacleManager.add_new_obstacle(self)
         self.gpu_obstacle : es.GPUShape = None
