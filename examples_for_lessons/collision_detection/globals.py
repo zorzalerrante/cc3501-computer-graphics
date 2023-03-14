@@ -1,4 +1,4 @@
 class Constants:
+    """ Global variables to adjust the game parameters easily"""
     GROUND_Y_LEVEL = -0.8
-    INITIAL_JUMP_SPEED_IN_Y = 0.3
-    GRAVITY = 0.4
+    GRAVITY = 0.9

@@ -5,6 +5,7 @@ import grafica.easy_shaders as es
 
 
 class MovingShader2D(es.SimpleTextureTransformShaderProgram):
+    """ Moves everything considering the position of the player by applying a translation """
 
     def __init__(self):
 
