@@ -1,5 +1,6 @@
 import pyglet
 from OpenGL.GL import *
+import trimesh as tm
 
 import numpy as np
 import sys, os.path

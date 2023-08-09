@@ -16,8 +16,8 @@ class Point:
         self.velocity = Vec2(0.0, 0.0)
 
     def pre_update(self, dt):
-        self.previousPosition = self.position
         self.velocity = (self.position - self.previousPosition)
+        self.previousPosition = self.position
 
     def bound(self, max_x, max_y):
         if self.position.x < 0:
