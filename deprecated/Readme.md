@@ -1,3 +1,10 @@
+# IMPORTANTE: ESTOS EJEMPLOS SON DE VERSIONES PREVIAS DEL CURSO. 
+
+Están aquí solo por motivos históricos.
+
+---
+
+
 # The Hall of Fame 2022
 In [this](./HoF2022/hall.md) page, you can find the several renderings from the student's homeworks.
 

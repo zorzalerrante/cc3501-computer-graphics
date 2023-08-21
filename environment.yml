@@ -15,4 +15,3 @@ dependencies:
   - scipy
   - pip:
     - pyglet>=2.0.0
-    - mesa
