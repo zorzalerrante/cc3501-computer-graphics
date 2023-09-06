@@ -10,6 +10,7 @@ dependencies:
   - python
   - mesa
   - trimesh
+  - networkx
   - pillow
   - matplotlib
   - scipy
