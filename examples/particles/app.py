@@ -5,22 +5,12 @@ from itertools import chain
 from pathlib import Path
 
 import numpy as np
-import OpenGL.GL.shaders as shaders
+import OpenGL.GL as GL
 import pyglet
-from OpenGL.GL import (
-    GL_BLEND,
-    GL_ONE_MINUS_SRC_ALPHA,
-    GL_PROGRAM_POINT_SIZE,
-    GL_SRC_ALPHA,
-    glBlendFunc,
-    glDisable,
-    glEnable,
-)
 from pyglet.graphics.shader import Shader, ShaderProgram
 
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.dirname((os.path.abspath(__file__)))))
-)
+if sys.path[0] != "":
+    sys.path.insert(0, "")
 
 
 import grafica.transformations as tr
@@ -60,16 +50,12 @@ if __name__ == "__main__":
     projection = tr.ortho(-300.0, 300.0, -300.0, 300.0, 0.001, 10.0)
 
     view = tr.lookAt(
-        np.array([300.0, 300.0, 1.0]), # posición de la cámara
-        np.array([300.0, 300.0, 0.0]), # hacia dónde apunta
-        np.array([0.0, 1.0, 0.0]),     # vector para orientarla (arriba)
+        np.array([300.0, 300.0, 1.0]),  # posición de la cámara
+        np.array([300.0, 300.0, 0.0]),  # hacia dónde apunta
+        np.array([0.0, 1.0, 0.0]),  # vector para orientarla (arriba)
     )
 
     pipeline.use()
-    # ojo! OpenGL usa column major, pero numpy usa row major.
-    # por eso antes le pasábamos un parámetro GL_TRUE a la opción traspose
-    # aquí el parámetro order='F' indica que es row major
-    # (así lo espera pyglet para entregarlo a OpenGL)
     pipeline["projection"] = projection.reshape(16, 1, order="F")
     pipeline["view"] = view.reshape(16, 1, order="F")
     pipeline["max_ttl"] = 3
@@ -77,18 +63,20 @@ if __name__ == "__main__":
     # nuestra colección de partículas.
     # ¿por qué es una deque (cola)?
     win.particles = deque()
-    # los datos que tendremos en la GPU. los gestionaremos con pyglet
+    # Guardaremos una referencia a los datos que tendremos en la GPU.
+    # La necesitaremos más tarde, porque los datos de las partículas
+    # cambian todo el tiempo.
     win.particle_data = None
-    
+
     def add_particle(x, y):
         win.particles.append(Particle((x, y, 0.0), 3))
 
     @win.event
     def on_draw():
         win.clear()
-        glEnable(GL_PROGRAM_POINT_SIZE)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        GL.glEnable(GL.GL_PROGRAM_POINT_SIZE)
+        GL.glEnable(GL.GL_BLEND)
+        GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
 
         pipeline.use()
         if win.particle_data is not None:
@@ -117,10 +105,10 @@ if __name__ == "__main__":
             win.particle_data = pipeline.vertex_list(
                 len(win.particles), pyglet.gl.GL_POINTS, position="f", ttl="f"
             )
-            win.particle_data.position[:] = tuple(
-                chain(*(p.position for p in win.particles))
+            win.particle_data.position[:] = np.array(
+                list(chain(*(p.position for p in win.particles)))
             )
-            win.particle_data.ttl[:] = tuple(p.ttl for p in win.particles)
+            win.particle_data.ttl[:] = np.array(list(p.ttl for p in win.particles))
 
     pyglet.clock.schedule(update_particle_system, win)
     pyglet.app.run()
