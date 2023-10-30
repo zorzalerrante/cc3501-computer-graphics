@@ -14,5 +14,6 @@ dependencies:
   - pillow
   - matplotlib
   - scipy
+  - pybox2d
   - pip:
     - pyglet>=2.0.0
