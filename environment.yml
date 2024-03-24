@@ -3,7 +3,6 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - mkl
   - numpy
   - pip
   - pyopengl
@@ -14,6 +13,7 @@ dependencies:
   - pillow
   - matplotlib
   - scipy
-  - pybox2d
+  - cffi
   - pip:
     - pyglet>=2.0.0
+    - pymunk
