@@ -20,4 +20,4 @@ El siguiente comando ejecuta un ejemplo:
 ```
 python examples/hello_world/app.py
 ```
-1. **Configurar tu editor favorito**. En mi caso utilizo VSCODE. Allí puedes descargar el repositorio directamente y también ejecutar los programas. Para ello, deben indicarle cuál es el entorno/intérprete de Python que utilizarán: hay que hacer clic en la esquina inferior derecha (donde dice “Python: gráfica [...]”) y elegir el entorno que acaban de instalar. Después pueden presionar el botón de _play_ en la esquina superior derecha. 
+1. **Configurar tu editor favorito**. En mi caso utilizo VSCODE. Allí puedes descargar el repositorio directamente y también ejecutar los programas. Para ello, deben indicarle cuál es el entorno/intérprete de Python que utilizarán: hay que hacer clic en la esquina inferior derecha (donde dice “Python: gráfica [...]”) y elegir el entorno que acaban de instalar. Si estás en Windows, asegúrense de que el terminal por omisión sea `cmd.exe` y no _PowerShell_. Después pueden presionar el botón de _play_ en la esquina superior derecha. 
