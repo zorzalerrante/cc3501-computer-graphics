@@ -3,7 +3,7 @@
 
 import numpy as np
 
-__author__ = "Daniel Calderon"
+__author__ = "Daniel Calderon & Eduardo Graells-Garrido"
 __license__ = "MIT"
 
 def identity():
@@ -202,19 +202,19 @@ def ortho(left, right, bottom, top, near, far):
 
 
 def lookAt(eye, at, up):
-
-    forward = (at - eye)
+    forward = (eye - at)
     forward = forward / np.linalg.norm(forward)
 
-    side = np.cross(forward, up)
+    side = np.cross(up, forward)
     side = side / np.linalg.norm(side)
 
-    newUp = np.cross(side, forward)
-    newUp = newUp / np.linalg.norm(newUp)
+    newUp = np.cross(forward, side)
 
     return np.array([
-            [side[0],       side[1],    side[2], -np.dot(side, eye)],
-            [newUp[0],     newUp[1],   newUp[2], -np.dot(newUp, eye)],
-            [-forward[0], -forward[1], -forward[2], np.dot(forward, eye)],
-            [0,0,0,1]
-        ], dtype = np.float32)
+            #        RX,         RY,         RZ,                     T
+            [   side[0],    side[1],    side[2],    -np.dot(side, eye)],
+            [  newUp[0],   newUp[1],   newUp[2],   -np.dot(newUp, eye)],
+            [forward[0], forward[1], forward[2], -np.dot(forward, eye)],
+            [         0,          0,          0,                     1]
+    ], dtype = np.float32)
+
