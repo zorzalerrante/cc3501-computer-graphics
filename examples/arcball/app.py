@@ -9,7 +9,8 @@ import sys
 if sys.path[0] != "":
     sys.path.insert(0, "")
 
-import grafica.transformations as tr
+# una función auxiliar para cargar shaders
+from grafica.utils import load_pipeline
 
 from grafica.arcball import Arcball
 from grafica.textures import texture_2D_setup
@@ -19,45 +20,88 @@ if __name__ == "__main__":
     height = 960
     window = pyglet.window.Window(width, height)
 
-    zorzal = tm.load("assets/zorzal.obj")
+    # dependiendo de lo que contenga el archivo a cargar,
+    # trimesh puede entregar una malla (mesh)
+    # o una escena (compuesta de mallas)
+    # con esto forzamos que siempre entregue una escena
+    asset = tm.load(sys.argv[1], force="scene")
 
-    zorzal.apply_translation(-zorzal.centroid)
-    zorzal.apply_scale(2.0 / zorzal.scale)
+    # de acuerdo a la documentación de trimesh, esto centra la escena
+    # no es igual a trabajar con una malla directamente
+    asset.rezero()
 
-    with open(Path(os.path.dirname(__file__)) / "vertex_program.glsl") as f:
-        vertex_source_code = f.read()
+    # y esto la escala. se crea una copia, por eso la asignación
+    asset = asset.scaled(2.0 / asset.scale)
 
-    with open(Path(os.path.dirname(__file__)) / "fragment_program.glsl") as f:
-        fragment_source_code = f.read()
+    # como no todos los archivos que carguemos tendrán textura,
+    # tendremos dos pipelines
+    tex_pipeline = load_pipeline(
+        Path(os.path.dirname(__file__)) / "vertex_program.glsl",
+        Path(os.path.dirname(__file__)) / "fragment_program.glsl",
+    )
 
-    vert_shader = pyglet.graphics.shader.Shader(vertex_source_code, "vertex")
-    frag_shader = pyglet.graphics.shader.Shader(fragment_source_code, "fragment")
-    pipeline = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)
-    pipeline.use()
+    notex_pipeline = load_pipeline(
+        Path(os.path.dirname(__file__)) / "vertex_program_notex.glsl",
+        Path(os.path.dirname(__file__)) / "fragment_program_notex.glsl",
+    )
+
+    # aquí guardaremos las mallas del modelo que graficaremos
     vertex_lists = {}
-    print(type(zorzal.geometry))
 
-    for object_id, object_geometry in zorzal.geometry.items():
+    # con esto iteramos sobre las mallas
+    for object_id, object_geometry in asset.geometry.items():
         mesh = {}
+
+        # por si acaso, para que la malla tenga normales consistentes
+        object_geometry.fix_normals(True)
+
         object_vlist = tm.rendering.mesh_to_vertexlist(object_geometry)
-        mesh["gpu_data"] = pipeline.vertex_list_indexed(
-            len(object_vlist[4][1]) // 3, GL.GL_TRIANGLES, object_vlist[3]
+
+        n_triangles = len(object_vlist[4][1]) // 3
+
+        # el pipeline a usar dependerá de si el objeto tiene textura
+        # OJO: asumimos que si tiene material, tiene textura
+        # pero no siempre es así.
+        if hasattr(object_geometry.visual, "material"):
+            mesh["pipeline"] = tex_pipeline
+            has_texture = True
+        else:
+            mesh["pipeline"] = notex_pipeline
+            has_texture = False
+
+        # inicializamos los datos en la GPU
+        mesh["gpu_data"] = mesh["pipeline"].vertex_list_indexed(
+            n_triangles, GL.GL_TRIANGLES, object_vlist[3]
         )
 
-        mesh["texture"] = texture_2D_setup(object_geometry.visual.material.image)
-
+        # copiamos la posición de los vértices
         mesh["gpu_data"].position[:] = object_vlist[4][1]
+
+        # las normales vienen en vertex_list[5]
+        # las manipulamos del mismo modo que los vértices
         mesh["gpu_data"].normal[:] = object_vlist[5][1]
-        mesh["gpu_data"].uv[:] = object_vlist[6][1]
+
+        # con (o sin) textura es diferente el procedimiento
+        # aunque siempre en vertex_list[6] viene la información de material
+        if has_texture:
+            # copiamos la textura
+            # trimesh ya la cargó, solo debemos copiarla a la GPU
+            # si no se usa trimesh, el proceso es el mismo,
+            # pero se debe usar Pillow para cargar la imagen
+            mesh["texture"] = texture_2D_setup(object_geometry.visual.material.image)
+            # copiamos las coordenadas de textura en el parámetro uv
+            mesh["gpu_data"].uv[:] = object_vlist[6][1]
+        else:
+            # usualmente el color viene como c4B/static en vlist[6][0], lo que significa "color de 4 bytes". idealmente eso debe verificarse
+            mesh["gpu_data"].color[:] = object_vlist[6][1]
+
         vertex_lists[object_id] = mesh
 
-        # en vertex_list[6] vienen las coordenadas de textura o de color
-        print(object_id, object_vlist[4][0], object_vlist[5][0], object_vlist[6][0])
-
+    # instanciamos nuestra Arcball
     arcball = Arcball(
         np.identity(4),
         np.array((width, height), dtype=float),
-        1,
+        1.5,
         np.array([0.0, 0.0, 0.0]),
     )
 
@@ -87,11 +131,20 @@ if __name__ == "__main__":
 
         window.clear()
 
-        pipeline.use()
-        pipeline["transform"] = arcball.pose.reshape(16, 1, order="F")
-
         for object_geometry in vertex_lists.values():
-            GL.glBindTexture(GL.GL_TEXTURE_2D, object_geometry["texture"])
+            # dibujamos cada una de las mallas con su respectivo pipeline
+            pipeline = object_geometry["pipeline"]
+            pipeline.use()
+
+            pipeline["transform"] = arcball.pose.reshape(16, 1, order="F")
+            pipeline["light_position"] = np.array([-1.0, 1.0, -1.0])
+
+            if "texture" in object_geometry:
+                GL.glBindTexture(GL.GL_TEXTURE_2D, object_geometry["texture"])
+            else:
+                # esto "activa" una textura nula
+                GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
+
             object_geometry["gpu_data"].draw(pyglet.gl.GL_TRIANGLES)
 
     pyglet.app.run()
