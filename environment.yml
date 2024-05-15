@@ -7,7 +7,7 @@ dependencies:
   - pip
   - pyopengl
   - python
-  - mesa
+  - mesa>=2.3.0
   - trimesh
   - networkx
   - pillow

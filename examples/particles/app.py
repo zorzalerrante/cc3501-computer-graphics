@@ -9,30 +9,40 @@ import OpenGL.GL as GL
 import pyglet
 from pyglet.graphics.shader import Shader, ShaderProgram
 
+# para calcular inversa
+from scipy import linalg
+
 if sys.path[0] != "":
     sys.path.insert(0, "")
 
 
 import grafica.transformations as tr
 
-
+# definimos un objeto partícula
 class Particle(object):
     def __init__(self, position, ttl):
         self.position = np.array(position, dtype=np.float32)
-        self.ttl = ttl
         self.velocity = np.array([0, -50, 0], dtype=np.float32)
+        # ttl es la abreviación de "time to live", es el tiempo de vida restante
+        self.ttl = ttl
 
     def step(self, dt):
+        # en cada paso de la simulación pasan dos cosas.
+        # por un lado, se reduce el tiempo de vida de la partícula
         self.ttl = self.ttl - dt
-        # método de Euler
+        # por otro, debemos actualizar su posición
+        # en este caso sabemos que la velocidad siempre apunta en la misma dirección
+        # pero en una aplicación más avanzada hay que calcular la velocidad
+        # usamos el método de Euler
         self.position = self.position + dt * self.velocity
 
     def alive(self):
+        # esta función utilitaria nos dice si la partícula está viva
         return bool(self.ttl > 0)
 
 
 if __name__ == "__main__":
-    width = 600
+    width = 900
     height = 600
 
     with open(Path(os.path.dirname(__file__)) / "point_vertex_program.glsl") as f:
@@ -47,13 +57,23 @@ if __name__ == "__main__":
     frag_shader = Shader(fragment_program, "fragment")
     pipeline = ShaderProgram(vert_shader, frag_shader)
 
-    projection = tr.ortho(-300.0, 300.0, -300.0, 300.0, 0.001, 10.0)
+    # trabajaremos con una escena de 600x600 
+    # y esta escena se verá en toda la pantalla
+    projection = tr.ortho(0, 600.0, 0, 600.0, 0.001, 10.0)
 
+    # especificamos la cámara en coordenadas de la escena
     view = tr.lookAt(
-        np.array([300.0, 300.0, 1.0]),  # posición de la cámara
-        np.array([300.0, 300.0, 0.0]),  # hacia dónde apunta
-        np.array([0.0, 1.0, 0.0]),  # vector para orientarla (arriba)
+        # posición de la cámara
+        np.array([300.0, 300.0, 1.0]),  
+        # hacia dónde apunta
+        np.array([300.0, 300.0, 0.0]),  
+        # vector para orientarla (arriba)
+        np.array([0.0, 1.0, 0.0]),  
     )
+
+    # tendremos que convertir las coordenadas de la pantalla a coordenadas de la escena
+    # para ello calculamos esta inversa
+    inv_view_proj = linalg.inv(projection @ view)
 
     pipeline.use()
     pipeline["projection"] = projection.reshape(16, 1, order="F")
@@ -68,25 +88,36 @@ if __name__ == "__main__":
     # cambian todo el tiempo.
     win.particle_data = None
 
-    def add_particle(x, y):
-        win.particles.append(Particle((x, y, 0.0), 3))
-
     @win.event
     def on_draw():
         win.clear()
+        # usaremos esto en el shader, porque dibujaremos GL_POINTS
         GL.glEnable(GL.GL_PROGRAM_POINT_SIZE)
         GL.glEnable(GL.GL_BLEND)
         GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
 
         pipeline.use()
+
+        # si no tenemos partículas, no dibujamos
         if win.particle_data is not None:
             win.particle_data.draw(pyglet.gl.GL_POINTS)
 
     @win.event
     def on_mouse_motion(x, y, dx, dy):
-        add_particle(x, y)
+        # convertimos las coordenadas de la pantalla 
+        # (que fueron calculadas en la etapa de SCREEN MAPPING)
+        # a coordenadas del volumen normalizado: entre -1 y 1
+        norm_screen_x = (x / width) * 2 - 1
+        norm_screen_y = (y / height) * 2 - 1
+
+        # "desproyectamos"
+        result = inv_view_proj @ np.array([norm_screen_x, norm_screen_y, 0.0, 1.0])
+
+        # y el resultado se lo asignamos a una partícula
+        win.particles.append(Particle((result[0], result[1], 0.0), 3))
 
     def update_particle_system(dt, win):
+        # primero debemos revisar cuales partículas ya no están vivas
         to_remove = 0
         for i, p in enumerate(win.particles):
             p.step(dt)
@@ -94,6 +125,7 @@ if __name__ == "__main__":
             if not p.alive():
                 to_remove += 1
 
+        # descartamos a las que dejaron de vivir
         for i in range(to_remove):
             win.particles.popleft()
 
@@ -101,6 +133,7 @@ if __name__ == "__main__":
             win.particle_data.delete()
             win.particle_data = None
 
+        # si hay partículas vivas, hay que copiarlas a la GPU
         if len(win.particles) > 0:
             win.particle_data = pipeline.vertex_list(
                 len(win.particles), pyglet.gl.GL_POINTS, position="f", ttl="f"
@@ -111,4 +144,4 @@ if __name__ == "__main__":
             win.particle_data.ttl[:] = np.array(list(p.ttl for p in win.particles))
 
     pyglet.clock.schedule(update_particle_system, win)
-    pyglet.app.run()
+    pyglet.app.run() 
