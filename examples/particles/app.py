@@ -15,13 +15,15 @@ from scipy import linalg
 if sys.path[0] != "":
     sys.path.insert(0, "")
 
-
+from grafica.utils import load_pipeline
 import grafica.transformations as tr
+
 
 # definimos un objeto partícula
 class Particle(object):
     def __init__(self, position, ttl):
         self.position = np.array(position, dtype=np.float32)
+        # por simpleza asumiremos que tiene velocidad constante en el eje y, sin aceleraci[on]
         self.velocity = np.array([0, -50, 0], dtype=np.float32)
         # ttl es la abreviación de "time to live", es el tiempo de vida restante
         self.ttl = ttl
@@ -45,30 +47,25 @@ if __name__ == "__main__":
     width = 900
     height = 600
 
-    with open(Path(os.path.dirname(__file__)) / "point_vertex_program.glsl") as f:
-        vertex_program = f.read()
-
-    with open(Path(os.path.dirname(__file__)) / "point_fragment_program.glsl") as f:
-        fragment_program = f.read()
-
     win = pyglet.window.Window(width, height)
 
-    vert_shader = Shader(vertex_program, "vertex")
-    frag_shader = Shader(fragment_program, "fragment")
-    pipeline = ShaderProgram(vert_shader, frag_shader)
+    pipeline = load_pipeline(
+        Path(os.path.dirname(__file__)) / "point_vertex_program.glsl",
+        Path(os.path.dirname(__file__)) / "point_fragment_program.glsl",
+    )
 
-    # trabajaremos con una escena de 600x600 
+    # trabajaremos con una escena de 600x600
     # y esta escena se verá en toda la pantalla
     projection = tr.ortho(0, 600.0, 0, 600.0, 0.001, 10.0)
 
     # especificamos la cámara en coordenadas de la escena
     view = tr.lookAt(
         # posición de la cámara
-        np.array([300.0, 300.0, 1.0]),  
+        np.array([300.0, 300.0, 1.0]),
         # hacia dónde apunta
-        np.array([300.0, 300.0, 0.0]),  
+        np.array([300.0, 300.0, 0.0]),
         # vector para orientarla (arriba)
-        np.array([0.0, 1.0, 0.0]),  
+        np.array([0.0, 1.0, 0.0]),
     )
 
     # tendremos que convertir las coordenadas de la pantalla a coordenadas de la escena
@@ -104,7 +101,7 @@ if __name__ == "__main__":
 
     @win.event
     def on_mouse_motion(x, y, dx, dy):
-        # convertimos las coordenadas de la pantalla 
+        # convertimos las coordenadas de la pantalla
         # (que fueron calculadas en la etapa de SCREEN MAPPING)
         # a coordenadas del volumen normalizado: entre -1 y 1
         norm_screen_x = (x / width) * 2 - 1
@@ -144,4 +141,4 @@ if __name__ == "__main__":
             win.particle_data.ttl[:] = np.array(list(p.ttl for p in win.particles))
 
     pyglet.clock.schedule(update_particle_system, win)
-    pyglet.app.run() 
+    pyglet.app.run()

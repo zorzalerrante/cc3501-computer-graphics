@@ -6,9 +6,7 @@ from pyglet.math import Vec2
 gravity = Vec2(0.0, -9.8)
 damping = 0.01
 
-
-def distance(v1, v2):
-    return v1.distance(v2)
+distance = lambda v1, v2: v1.distance(v2)
 
 
 class Point:
@@ -69,6 +67,7 @@ class ClothSystem:
                 vertex.previousPosition = curr_pos
 
     def _apply_restrictions(self):
+
         for length, joint in zip(self.dists, self.joints):
             src = self.vertices[joint[0]]
             dst = self.vertices[joint[1]]

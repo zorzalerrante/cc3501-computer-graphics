@@ -13,6 +13,7 @@ from pyglet.math import Vec2
 if sys.path[0] != "":
     sys.path.insert(0, "")
 
+from grafica.utils import load_pipeline
 import grafica.transformations as tr
 
 if __name__ == "__main__":
@@ -24,17 +25,12 @@ if __name__ == "__main__":
     half_width = width // 2
     half_height = height // 2
 
-    with open(Path(os.path.dirname(__file__)) / "point_vertex_program.glsl") as f:
-        vertex_program = f.read()
-
-    with open(Path(os.path.dirname(__file__)) / "point_fragment_program.glsl") as f:
-        fragment_program = f.read()
-
     win = pyglet.window.Window(width, height)
 
-    vert_shader = Shader(vertex_program, "vertex")
-    frag_shader = Shader(fragment_program, "fragment")
-    pipeline = ShaderProgram(vert_shader, frag_shader)
+    pipeline = load_pipeline(
+        Path(os.path.dirname(__file__)) / "point_vertex_program.glsl",
+        Path(os.path.dirname(__file__)) / "point_fragment_program.glsl",
+    )
 
     projection = tr.ortho(
         -half_width, half_width, -half_height, half_height, 0.001, 10.0
@@ -51,7 +47,12 @@ if __name__ == "__main__":
     pipeline["view"] = view.reshape(16, 1, order="F")
 
     win.cloth = Cloth(
-        width, height, Vec2(half_width - horizontal_resolution * spacing // 2, height * 0.95), horizontal_resolution, vertical_resolution, spacing
+        width,
+        height,
+        Vec2(half_width - horizontal_resolution * spacing // 2, height * 0.95),
+        horizontal_resolution,
+        vertical_resolution,
+        spacing,
     )
 
     win.node_data = pipeline.vertex_list(
@@ -71,7 +72,7 @@ if __name__ == "__main__":
     @win.event
     def on_draw():
         win.clear()
-        
+
         win.node_data.position[:] = tuple(
             chain(*((p.position[0], p.position[1], 0.0) for p in win.cloth.vertices))
         )
@@ -83,7 +84,6 @@ if __name__ == "__main__":
         pipeline.use()
         win.node_data.draw(pyglet.gl.GL_POINTS)
         win.joint_data.draw(pyglet.gl.GL_LINES)
-
 
     pyglet.clock.schedule(update_cloth_system, win)
     pyglet.app.run()
