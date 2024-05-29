@@ -11,6 +11,9 @@ from world import World
 from pajarito import Pajarito
 from grid import Grid
 
+from pathlib import Path
+
+# variables del estado del programa
 program_state = {
     "paused": False,
     "bird_camera": False,
@@ -18,25 +21,129 @@ program_state = {
     "projection_matrix": None,
 }
 
+# variables del mundo que simularemos
+world_parameters = {
+    "vision": {"min": 60, "max": 200, "default": 100},
+    "cohere_factor": {"min": 0.0001, "max": 0.001, "default": 0.0005},
+    "separation_factor": {"min": 0.0001, "max": 0.01, "default": 0.005},
+    "match_factor": {"min": 0.0001, "max": 0.01, "default": 0.005},
+    "distance": {"min": 20, "max": 60, "default": 25},
+    "speed": {"min": 0.01, "max": 1.0, "default": 0.75},
+}
+
 
 def main():
     window = pyglet.window.Window(width=1024, height=768)
 
+    # noten que el tamaño de la ventana es independiente del tamaño del mundo.
+    world_width = 960
+    world_height = 540
+
+    # este es el mundo a simular.
     flock = World(
-        60,
-        width=640,
-        height=480,
-        speed=0.75,
-        vision=100,
-        separation=20,
-        cohere=0.001,
-        separate=0.1,
-        match=0.001,
+        # con 50 pajaritos
+        50,
+        # y muchos parámetros
+        width=world_width,
+        height=world_height,
+        speed=world_parameters["speed"]["default"],
+        vision=world_parameters["vision"]["default"],
+        distance=world_parameters["distance"]["default"],
+        cohere_factor=world_parameters["cohere_factor"]["default"],
+        separation_factor=world_parameters["separation_factor"]["default"],
+        match_factor=world_parameters["match_factor"]["default"],
     )
 
+    # dibujaremos cada boid como un pajarito (zorzal)
     pajarito_3d = Pajarito()
+    # también dibujaremos una grilla para saber el tamaño del mundo
     grid = Grid()
 
+    # esta vez dibujaremos elementos de control que nos permitirán
+    # modificar los parámetros del mundo y de sus habitantes.
+    # en pyglet estos elementos se dibujan a través de un "Batch" (lote)
+    # así que lo creamos aquí.
+    # GUI: Graphical User Interface
+    gui_batch = pyglet.graphics.Batch()
+
+    # los elementos GUI utilizan imágenes. hay que cargarlas con un...
+    # cargador de pyglet especial para ello.
+    # recibe como parámetro la ruta completa a la carpeta con imágenes.
+    loader = pyglet.resource.Loader(str(Path("assets/UI").resolve()))
+
+    # cargamos las imágenes
+    slider_img = loader.image("bar.png")
+    knob_img = loader.image("knob.png")
+
+    # ahora crearemos un elemento GUI para cada parámetro del mundo
+    sliders = {}
+    labels = {}
+
+    # antes de ver esta función leer lo que viene en el ciclo después
+    def update_func(current_attr):
+        max_value = world_parameters[current_attr]["max"]
+        min_value = world_parameters[current_attr]["min"]
+
+        # los valores de la slider van entre 1 y 100. así que debemos
+        # normalizar el valor para que coincida con los de nuestras variables.
+        def slider_update(value):
+            current_value = (value / 100) * (max_value - min_value) + min_value
+            print(current_attr, current_value)
+            for boid in flock.iter_agents():
+                setattr(boid, current_attr, current_value)
+
+        return slider_update
+
+    for i, attr in enumerate(world_parameters.keys()):
+        # ¿dónde estará en la pantalla?
+        # se usan coordenadas de la ventana.
+        pos_x = 50 + (slider_img.width + 20) * i
+        pos_y = 50
+
+        # crearemos un "slider", una barra donde se mueve un botón
+        sliders[attr] = pyglet.gui.Slider(
+            pos_x,
+            pos_y,
+            slider_img,
+            knob_img,
+            5,
+            batch=gui_batch,
+        )
+
+        # se supone que esto le asigna un valor, pero no resulta :p
+        sliders[attr].value = (
+            world_parameters[attr]["default"] - world_parameters[attr]["min"]
+        ) / (world_parameters[attr]["max"] - world_parameters[attr]["min"])
+        sliders[attr].on_change(sliders[attr].value)
+
+        # con esto incorporamos el elemento GUI o "widget" en la ventana
+        # eso permite interactuar con él.
+        # nota: eso no lo dibuja. de eso se encarga el batch
+        window.push_handlers(sliders[attr])
+
+        # pondremos una etiqueta de texto sobre cada elemento
+        labels[attr] = pyglet.text.Label(
+            attr,
+            font_name="Verdana",
+            x=pos_x,
+            y=pos_y + 10,
+            font_size=12,
+            color=(0, 0, 0, 255),
+        )
+
+        # ¡ahora debemos conectar nuestro mundo con la slider!
+        # conectaremos una función de update con el evento "on_change"
+        # que se activa cada vez que se cambia el valor correspondiente
+        # en la UI
+        # en Python las funciones son ciudadanas de primer nivel así que
+        # podemos definirlas y retornarlas :D
+        # en este caso, esta función es única para el atributo sobre el 
+        # que estamos iterando
+        # por eso con update_func entregamos la función que actualiza los
+        # valores de esta variable/slider en particular
+        sliders[attr].set_handler("on_change", update_func(attr))
+
+    # esta función ejecutará un paso de la simulación
     def tick(time):
         if not program_state["paused"]:
             flock.step()
@@ -65,13 +172,15 @@ def main():
         grid.pipeline["projection"] = program_state["projection_matrix"].reshape(
             16, 1, order="F"
         )
-        grid.draw(tr.scale(320, 240, 1) @ tr.translate(1, 1, 0))
+        grid.draw(
+            tr.scale(world_width / 2, world_height / 2, 1) @ tr.translate(1, 1, 0)
+        )
 
         pajarito_3d.setup_transforms(
             program_state["view_matrix"], program_state["projection_matrix"]
         )
 
-        for i, boid in enumerate(flock.iter_agents()):
+        for boid in flock.iter_agents():
             angle = np.arctan2(boid.velocity[1], boid.velocity[0])
 
             transform = tr.matmul(
@@ -88,10 +197,24 @@ def main():
             pajarito_3d.draw(transform)
             # break
 
+        # dibujamos la GUI
+        # ¡tenemos que desactivar el test de profundidad!
+        # propuesto: ¿por qué?
+        GL.glDisable(GL.GL_DEPTH_TEST)
+
+        for l in labels.values():
+            l.draw()
+
+        gui_batch.draw()
+
     def view_transform(bird_camera):
         if not bird_camera:
-            viewPos = np.array([320, 240, 600])
-            view = tr.lookAt(viewPos, np.array([320, 240, 0]), np.array([0, 1, 0]))
+            viewPos = np.array([world_width / 2, world_height / 2, 600])
+            view = tr.lookAt(
+                viewPos,
+                np.array([world_width / 2, world_height / 2, 0]),
+                np.array([0, 1, 0]),
+            )
         else:
             boid = next(iter(flock.iter_agents()))
             bird_position = np.array([boid.pos[0], boid.pos[1], 0, 1])
@@ -126,7 +249,7 @@ def main():
 
     program_state["view_matrix"] = view_transform(program_state["bird_camera"])
     program_state["projection_matrix"] = tr.perspective(
-        60, float(window.width) / float(window.height), 0.01, 1000
+        65, float(window.width) / float(window.height), 0.01, 1000
     )
 
     pyglet.clock.schedule_interval(tick, 1 / 60)

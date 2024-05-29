@@ -5,15 +5,16 @@ import trimesh as tm
 import OpenGL.GL as GL
 
 import sys
+
 if sys.path[0] != "":
     sys.path.insert(0, "")
 
 import grafica.transformations as tr
 from grafica.textures import texture_2D_setup
-
+from grafica.utils import load_pipeline
 from pathlib import Path
 
-
+# esta clase dibuja un zorzal
 class Pajarito(object):
     def __init__(self, *args, **kwargs):
         self.zorzal = tm.load("assets/zorzal.obj")
@@ -25,16 +26,10 @@ class Pajarito(object):
         self.setup_program()
 
     def setup_program(self):
-        with open(Path(os.path.dirname(__file__)) / "vertex_program.glsl") as f:
-            vertex_source_code = f.read()
-
-        with open(Path(os.path.dirname(__file__)) / "fragment_program.glsl") as f:
-            fragment_source_code = f.read()
-
-        vert_shader = pyglet.graphics.shader.Shader(vertex_source_code, "vertex")
-        frag_shader = pyglet.graphics.shader.Shader(fragment_source_code, "fragment")
-
-        self.pipeline = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)
+        self.pipeline = load_pipeline(
+            Path(os.path.dirname(__file__)) / "vertex_program.glsl",
+            Path(os.path.dirname(__file__)) / "fragment_program.glsl",
+        )
 
         self.vertex_lists = {}
 
@@ -48,10 +43,9 @@ class Pajarito(object):
             mesh["texture"] = texture_2D_setup(object_geometry.visual.material.image)
 
             mesh["gpu_data"].position[:] = object_vlist[4][1]
-            #mesh["gpu_data"].normal[:] = object_vlist[5][1]
+            # mesh["gpu_data"].normal[:] = object_vlist[5][1]
             mesh["gpu_data"].uv[:] = object_vlist[6][1]
             self.vertex_lists[object_id] = mesh
-            print(self.vertex_lists)
 
     def setup_transforms(self, view, projection):
         self.pipeline.use()
@@ -65,4 +59,3 @@ class Pajarito(object):
         for object_geometry in self.vertex_lists.values():
             GL.glBindTexture(GL.GL_TEXTURE_2D, object_geometry["texture"])
             object_geometry["gpu_data"].draw(pyglet.gl.GL_TRIANGLES)
-
