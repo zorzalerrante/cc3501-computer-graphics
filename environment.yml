@@ -14,6 +14,8 @@ dependencies:
   - matplotlib
   - scipy
   - cffi
+  - shapely
+  - rtree
   - pip:
     - pyglet>=2.0.0
     - pymunk
