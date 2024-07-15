@@ -24,7 +24,6 @@ def intersect_plane(O, D, P, N):
     return d
 
 
-@jit
 def intersect_sphere(O, D, S, R):
     """
     Retorna la distancia desde O hasta la intersección del rayo (O, D) con la
@@ -47,11 +46,28 @@ def intersect_sphere(O, D, S, R):
     return np.inf
 
 
+#NUEVO: Este metodo define las intersecciónes en una malla
+def intersect_mesh(O,D,mesh):
+    origin = np.array([O])
+    direction = np.array([D])
+    locations, index_ray, index_tri = mesh.ray.intersects_location(
+        ray_origins=origin,ray_directions=direction,multiple_hits=False
+    )
+    if len(locations) == 0:
+        return np.inf
+    dx,dy,dz = locations[0]-O
+    distance = np.sqrt(dx**2+dy**2+dz**2)
+    return distance
+
+
 def intersect(O, D, obj):
     if obj["type"] == "plane":
         return intersect_plane(O, D, obj["position"], obj["normal"])
     elif obj["type"] == "sphere":
         return intersect_sphere(O, D, obj["position"], obj["radius"])
+    #NUEVO: Opción para una malla, se aplica su metodo de intersección.
+    elif obj["type"] == "mesh":
+        return intersect_mesh(O, D, obj["mesh"])
 
 
 def get_normal(obj, M):
@@ -63,6 +79,9 @@ def get_normal(obj, M):
         N = normalize(M - obj["position"])
     elif obj["type"] == "plane":
         N = obj["normal"]
+    #NUEVO: Opción para una malla, es similar a como funcióna con una esfera
+    elif obj["type"] == "mesh":
+        N = normalize(M - obj["position"])
     return N
 
 
@@ -160,3 +179,15 @@ def add_plane(position, normal):
         specular_c=0.5,
         reflection=0.25,
     )
+
+#NUEVO: Este metodo añade una malla y le asigna sus valores asociados correspondientes.
+def add_mesh(position, mesh, color):
+    mesh.apply_translation(position)
+    return dict(
+        type="mesh",
+        mesh=mesh,
+        color=np.array(color),
+        reflection=0.5,
+        position=position
+        )
+

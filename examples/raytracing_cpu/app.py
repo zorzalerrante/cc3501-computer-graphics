@@ -6,16 +6,23 @@ if sys.path[0] != "":
     sys.path.insert(0, "")
 
 from grafica.math import normalize
-from raytracing import trace_ray, add_plane, add_sphere
+from raytracing import trace_ray, add_plane, add_sphere, add_mesh
+import trimesh as tm
 
     
 if __name__ == "__main__":
     # tamaño de la imagen
-    w = 640
-    h = 480
+    w = 4096
+    h = 2160
+
+    #NUEVO: Cargamos el modelo 3D
+    mesh = tm.load("assets/suzanne.obj", force="mesh")
+
+    #NUEVO: Es posible que necesite algunos ajustes para tamaño
+    mesh.apply_scale(1.5/mesh.scale)
 
     # una descripción básica de la escena
-    scene = [add_sphere([.75, .1, 1.], .6, [0., 0., 1.]),
+    scene = [add_mesh([.5, 0.1, 1],mesh, [.2, 1.0, .3]),
             add_sphere([-.75, .1, 2.25], .6, [.5, .223, .5]),
             add_sphere([-2.75, .1, 3.5], .6, [1., .572, .184]),
             add_plane([0., -.5, 0.], [0., 1., 0.]),
