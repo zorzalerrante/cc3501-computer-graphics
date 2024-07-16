@@ -17,11 +17,11 @@ def intersect_plane(O, D, P, N):
     """
     denom = np.dot(D, N)
     if np.abs(denom) < 1e-6:
-        return np.inf
+        return np.inf, None
     d = np.dot(P - O, N) / denom
     if d < 0:
-        return np.inf
-    return d
+        return np.inf, None
+    return d, None
 
 
 def intersect_sphere(O, D, S, R):
@@ -42,8 +42,11 @@ def intersect_sphere(O, D, S, R):
         t1 = c / q
         t0, t1 = min(t0, t1), max(t0, t1)
         if t1 >= 0:
-            return t1 if t0 < 0 else t0
-    return np.inf
+            if t0<0:
+                return t1, None
+            else:
+                return t0, None
+    return np.inf, None
 
 
 #NUEVO: Este metodo define las intersecciónes en una malla
@@ -54,10 +57,11 @@ def intersect_mesh(O,D,mesh):
         ray_origins=origin,ray_directions=direction,multiple_hits=False
     )
     if len(locations) == 0:
-        return np.inf
+        return np.inf, None
     dx,dy,dz = locations[0]-O
     distance = np.sqrt(dx**2+dy**2+dz**2)
-    return distance
+    face_idx = index_tri[0]
+    return distance, face_idx
 
 
 def intersect(O, D, obj):
@@ -70,7 +74,7 @@ def intersect(O, D, obj):
         return intersect_mesh(O, D, obj["mesh"])
 
 
-def get_normal(obj, M):
+def get_normal(obj, M, face_idx = None):
     """
     Calcula la normal de la superficie de obj en el punto M.
     Por ahora solo funciona con esferas y planos.
@@ -81,7 +85,7 @@ def get_normal(obj, M):
         N = obj["normal"]
     #NUEVO: Opción para una malla, es similar a como funcióna con una esfera
     elif obj["type"] == "mesh":
-        N = normalize(M - obj["position"])
+        N = obj["mesh"].face_normals[face_idx]
     return N
 
 
@@ -108,8 +112,8 @@ def trace_ray(
     t = np.inf
     for i, obj in enumerate(scene):
         t_obj = intersect(rayO, rayD, obj)
-        if t_obj < t:
-            t, obj_idx = t_obj, i
+        if t_obj[0] < t:
+            t, obj_idx = t_obj[0], i
 
     # si t es infinito, quiere decir que no tocó a nada
     if t == np.inf:
@@ -119,8 +123,10 @@ def trace_ray(
     obj = scene[obj_idx]
     # calculamos el punto de intersección
     M = rayO + rayD * t
+
+    distance, face_idx = intersect(rayO, rayD, obj)
     # calculamos las propiedades del objeto: normal y color
-    N = get_normal(obj, M)
+    N = get_normal(obj, M, face_idx)
     color = get_color(obj, M)
 
     # evaluamos la iluminación.
@@ -131,7 +137,7 @@ def trace_ray(
     # que sale desde el punto M hacia la luz
     # y verificar que no se intersecta con otros objetos
     l = [
-        intersect(M + N * 0.0001, toL, obj_sh)
+        intersect(M + N * 0.0001, toL, obj_sh)[0]
         for k, obj_sh in enumerate(scene)
         if k != obj_idx
     ]

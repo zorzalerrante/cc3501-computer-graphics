@@ -14,7 +14,6 @@ if __name__ == "__main__":
     # tamaño de la imagen
     w = 4096
     h = 2160
-
     #NUEVO: Cargamos el modelo 3D
     mesh = tm.load("assets/suzanne.obj", force="mesh")
 
