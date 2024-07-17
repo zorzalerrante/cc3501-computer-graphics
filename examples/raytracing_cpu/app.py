@@ -6,18 +6,35 @@ if sys.path[0] != "":
     sys.path.insert(0, "")
 
 from grafica.math import normalize
-from raytracing import trace_ray, add_plane, add_sphere
+import grafica.transformations as tr
+from raytracing import trace_ray, add_plane, add_sphere, add_mesh
+import trimesh as tm
 
     
 if __name__ == "__main__":
     # tamaño de la imagen
-    w = 640
-    h = 480
+    w = 1920
+    h = 1080
+
+    #NUEVO: Cargamos el modelo 3D
+    charmander = tm.load("assets/Charmander.STL", force= "mesh")
+    squirtle = tm.load("assets/Squirtle.STL", force= "mesh")
+    bulbasaur = tm.load("assets/Bulbasaur.STL", force= "mesh")
+
+    #NUEVO: Es posible que necesite algunos ajustes para tamaño y orientación
+    charmander.apply_scale(1.5/charmander.scale)
+    squirtle.apply_scale(1.5/squirtle.scale)
+    bulbasaur.apply_scale(1.5/bulbasaur.scale)
+    mesh_rotateZ = tr.rotationZ(np.pi)
+    mesh_rotateX = tr.rotationX(np.pi/2)
+    charmander.apply_transform(mesh_rotateZ @ mesh_rotateX)
+    squirtle.apply_transform(mesh_rotateZ @ mesh_rotateX)
+    bulbasaur.apply_transform(mesh_rotateZ @ mesh_rotateX)
 
     # una descripción básica de la escena
-    scene = [add_sphere([.75, .1, 1.], .6, [0., 0., 1.]),
-            add_sphere([-.75, .1, 2.25], .6, [.5, .223, .5]),
-            add_sphere([-2.75, .1, 3.5], .6, [1., .572, .184]),
+    scene = [add_mesh([1.35, -0.5, 1.6],charmander, [1, 0.6, 0]),
+            add_mesh([0.25, -0.5, 2.25],squirtle, [.2, .8, 1]),
+            add_mesh([-1.5, -0.5, 3.5], bulbasaur, [0.3, 1, .2]),
             add_plane([0., -.5, 0.], [0., 1., 0.]),
         ]
 
