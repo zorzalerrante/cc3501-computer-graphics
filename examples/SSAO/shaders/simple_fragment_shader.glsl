@@ -9,7 +9,6 @@ uniform vec3 lightPos;
 uniform vec3 viewPos;
 uniform vec3 color;
 uniform sampler2D ssaoTexture;
-uniform bool ssaoEnabled;
 
 void main()
 {
@@ -31,8 +30,8 @@ void main()
     vec3 specular = specularStrength * spec * color;  
     
     // Get SSAO factor and exaggerate it
-    float ssaoFactor = ssaoEnabled ? texture(ssaoTexture, TexCoords).r : 1.0;
-    ssaoFactor = ssaoEnabled ? pow(ssaoFactor, 2.0) : 1.0; // Exaggerate the effect
+    float ssaoFactor = texture(ssaoTexture, TexCoords).r;
+    ssaoFactor = pow(ssaoFactor, 2.0);
     
     // Apply SSAO only to ambient lighting
     ambient *= ssaoFactor;

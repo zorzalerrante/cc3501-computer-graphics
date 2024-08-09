@@ -17,8 +17,6 @@ class App:
         self.clock = pg.time.Clock()
         glClearColor(0.0, 0.0, 0.0, 1)
         glEnable(GL_DEPTH_TEST)
-
-        self.ssao_enabled = True
         
         self.shader = self.createShader("examples/SSAO/shaders/simple_vertex_shader.glsl", "examples/SSAO/shaders/simple_fragment_shader.glsl")
         self.gBufferShader = self.createShader("examples/SSAO/shaders/g_buffer_vertex.glsl", "examples/SSAO/shaders/g_buffer_fragment.glsl")
@@ -46,7 +44,6 @@ class App:
         self.lightPosLocation = glGetUniformLocation(self.shader, "lightPos")
         self.viewPosLocation = glGetUniformLocation(self.shader, "viewPos")
         self.ssaoTextureLocation = glGetUniformLocation(self.shader, "ssaoTexture")
-        self.ssaoEnabledLocation = glGetUniformLocation(self.shader, "ssaoEnabled")
 
         glUseProgram(self.shader)
         glUniformMatrix4fv(self.viewMatrixLocation, 1, GL_FALSE, self.view)
@@ -55,11 +52,11 @@ class App:
         self.lightPos = pyrr.Vector3([2.0, 2.0, .0])
         glUniform3f(self.lightPosLocation, self.lightPos.x, self.lightPos.y, self.lightPos.z)
 
-        # Configurar G-Buffer
+        #configurar g-buffer
         self.gBuffer = glGenFramebuffers(1)
         glBindFramebuffer(GL_FRAMEBUFFER, self.gBuffer)
 
-        # Textura de posición
+        #textura de posición
         self.gPosition = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.gPosition)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, 800, 600, 0, GL_RGB, GL_FLOAT, None)
@@ -67,7 +64,7 @@ class App:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.gPosition, 0)
 
-        # Textura de normales
+        #textura de normales
         self.gNormal = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.gNormal)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, 800, 600, 0, GL_RGB, GL_FLOAT, None)
@@ -75,26 +72,26 @@ class App:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, self.gNormal, 0)
 
-        # Buffer de profundidad
+        #buffer de profundidad
         self.rboDepth = glGenRenderbuffers(1)
         glBindRenderbuffer(GL_RENDERBUFFER, self.rboDepth)
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 800, 600)
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, self.rboDepth)
 
-        # Indicar a OpenGL que vamos a renderizar a múltiples buffers
+        #indicar a OpenGL que vamos a renderizar con más de un buffer
         glDrawBuffers(2, (GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1))
 
-        # Verificar que el framebuffer esté completo
+        #verificar que el framebuffer esté completo
         if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
             print("Error: Framebuffer no está completo!")
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
-        # Crear SSAO framebuffer
+        #crear ssao framebuffer
         self.ssaoFBO = glGenFramebuffers(1)
         glBindFramebuffer(GL_FRAMEBUFFER, self.ssaoFBO)
         
-        # Crear textura de color para SSAO
+        #crear textura de color para ssao
         self.ssaoColorBuffer = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.ssaoColorBuffer)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 800, 600, 0, GL_RED, GL_FLOAT, None)
@@ -107,11 +104,11 @@ class App:
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
-        # Crear framebuffer para el desenfoque
+        #crear framebuffer para el desenfoque
         self.blurFBO = glGenFramebuffers(1)
         glBindFramebuffer(GL_FRAMEBUFFER, self.blurFBO)
 
-        # Crear textura para el resultado del desenfoque
+        #crear textura para el resultado del desenfoque
         self.blurColorBuffer = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.blurColorBuffer)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 800, 600, 0, GL_RED, GL_FLOAT, None)
@@ -124,7 +121,7 @@ class App:
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0)
 
-        # Generar kernel SSAO y textura de ruido
+        #generar kernel ssao y textura de ruido
         self.ssaoKernel = self.generate_ssao_kernel()
         self.noiseTexture = self.generate_noise_texture()
         self.mainLoop()
@@ -143,25 +140,25 @@ class App:
 
     def load_model(self, filename):
         scene = trimesh.load(filename)
-        print(f"Loaded scene with {len(scene.geometry)} geometries")
+        print(f"Escena cargada con {len(scene.geometry)} geometrías")
         
         models = []
         
         for name, geometry in scene.geometry.items():
-            print(f"Processing geometry: {name}")
+            print(f"Procesando: {name}")
             print(f"Vertex count: {len(geometry.vertices)}")
             print(f"Face count: {len(geometry.faces)}")
             
             if not geometry.vertex_normals.any():
                 geometry.generate_normals()
 
-            #Garantizar la orientación correcta de las caras y ajustar las normales
+            #garantizar la orientación correcta de las caras y ajustar las normales
             geometry.fix_normals()
             
             vertices = np.hstack((geometry.vertices, geometry.vertex_normals))
             vertices = vertices.astype(np.float32)
 
-            # Extraer los índices de las caras
+            #extraer los índices de las caras
             indices = geometry.faces.flatten().astype(np.uint32)
 
             vao = glGenVertexArrays(1)
@@ -180,11 +177,11 @@ class App:
             glEnableVertexAttribArray(1)
             glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 24, ctypes.c_void_p(12))
 
-            #Extraer y normalizar color de material
+            #extraer y normalizar color de material
             if hasattr(geometry.visual, 'material'):
                 material = geometry.visual.material
                 if hasattr(material, 'diffuse'):
-                    color = np.array(material.diffuse[:3]) / 255.0  # Normaliza a rango 0-1 
+                    color = np.array(material.diffuse[:3]) / 255.0  #Normaliza a rango 0-1 
                 else:
                     color = np.array([0.8, 0.8, 0.8])
             else:
@@ -230,18 +227,14 @@ class App:
             for event in pg.event.get():
                 if (event.type == pg.QUIT):
                     running = False
-                elif event.type == pg.KEYDOWN:
-                    if event.key == pg.K_SPACE:
-                        self.ssao_enabled = not self.ssao_enabled
-                        print("SSAO:", "Activado" if self.ssao_enabled else "Desactivado")
 
-            # Primera pasada: Renderizar al G-Buffer
+            #primera pasada: renderizar al g-buffer
             glBindFramebuffer(GL_FRAMEBUFFER, self.gBuffer)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             glUseProgram(self.gBufferShader)
             self.render_scene(self.gBufferShader)
 
-            # Segunda pasada: SSAO
+            #segunda pasada: ssao
             glBindFramebuffer(GL_FRAMEBUFFER, self.ssaoFBO)
             glClear(GL_COLOR_BUFFER_BIT)
             glUseProgram(self.ssaoShader)
@@ -256,7 +249,7 @@ class App:
             glUniformMatrix4fv(glGetUniformLocation(self.ssaoShader, "projection"), 1, GL_FALSE, self.projection)
             self.render_quad()
 
-            # Tercera pasada: Desenfoque horizontal
+            #tercera pasada: desenfoque horizontal
             glBindFramebuffer(GL_FRAMEBUFFER, self.blurFBO)
             glClear(GL_COLOR_BUFFER_BIT)
             glUseProgram(self.blurShaderH)
@@ -264,28 +257,26 @@ class App:
             glBindTexture(GL_TEXTURE_2D, self.ssaoColorBuffer)
             self.render_quad()
 
-            # Cuarta pasada: Desenfoque vertical
-            glBindFramebuffer(GL_FRAMEBUFFER, self.ssaoFBO)  # Reutilizamos el FBO del SSAO
+            #cuarta pasada: desenfoque vertical
+            glBindFramebuffer(GL_FRAMEBUFFER, self.ssaoFBO) 
             glClear(GL_COLOR_BUFFER_BIT)
             glUseProgram(self.blurShaderV)
             glActiveTexture(GL_TEXTURE0)
             glBindTexture(GL_TEXTURE_2D, self.blurColorBuffer)
             self.render_quad()
 
-            # Quinta pasada: Renderizar la escena final (con SSAO?)
+            #quinta pasada: renderizar la escena final
             glBindFramebuffer(GL_FRAMEBUFFER, 0)
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             glUseProgram(self.shader)
             
-            # Pasar la posición de la vista al shader
-            glUniform3f(self.viewPosLocation, 0, 2, 5)  # Usa las mismas coordenadas que usaste para crear la matriz de vista
+            #pasar la posición de la vista al shader
+            glUniform3f(self.viewPosLocation, 0, 2, 5) 
             
-            # Activar y vincular la textura SSAO con desenfoque
+            #activar y vincular la textura ssao con desenfoque
             glActiveTexture(GL_TEXTURE0)
             glBindTexture(GL_TEXTURE_2D, self.ssaoColorBuffer)
             glUniform1i(self.ssaoTextureLocation, 0)
-
-            glUniform1i(self.ssaoEnabledLocation, int(self.ssao_enabled))
             
             self.render_scene(self.shader)
 
@@ -294,6 +285,7 @@ class App:
             self.clock.tick(60)
         self.quit()
 
+    #genera muestra de vectores aleatorios para los cálculos de oclusión
     def generate_ssao_kernel(self, kernel_size=64):
         kernel = []
         for i in range(kernel_size):
@@ -309,11 +301,12 @@ class App:
             kernel.append(sample)
         return np.array(kernel, dtype=np.float32)
 
+    #crea textura de ruido que añade variabilidad y mejora apariencia del efecto
     def generate_noise_texture(self, size=4):
         noise = np.random.uniform(0, 1, (size, size, 3)).astype(np.float32)
-        noise[:,:,2] = 0  # Sólo necesitamos componentes x e y
+        noise[:,:,2] = 0  #solo necesitamos componentes x e y
         
-        # Crear y configurar la textura de ruido
+        #crear y configurar la textura de ruido
         noiseTexture = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, noiseTexture)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, size, size, 0, GL_RGB, GL_FLOAT, noise)
@@ -325,15 +318,15 @@ class App:
         return noiseTexture
 
     def render_scene(self, shader):
-        # Renderizar el piso
+        #renderizar el piso
         floor_model = pyrr.matrix44.create_identity(dtype=np.float32)
         glUniformMatrix4fv(glGetUniformLocation(shader, "model"), 1, GL_FALSE, floor_model)
-        if shader == self.shader:  # Solo para el shader original
+        if shader == self.shader:  #solo shader principal
             glUniform3f(self.colorLocation, 0.5, 0.5, 0.5)
         glBindVertexArray(self.floor['vao'])
         glDrawArrays(GL_TRIANGLE_FAN, 0, self.floor['vertex_count'])
 
-        # Renderizar el auto
+        #renderizar el auto
         rotation_angle = pg.time.get_ticks() / 10000
         car_model = pyrr.matrix44.create_from_translation([0, 0.5, 0], dtype=np.float32)
         car_model = pyrr.matrix44.multiply(
@@ -347,13 +340,13 @@ class App:
         glUniformMatrix4fv(glGetUniformLocation(shader, "model"), 1, GL_FALSE, car_model)
 
         for model in self.models:
-            if shader == self.shader:  # Solo para el shader original
+            if shader == self.shader:  #solo shader principal
                 glUniform3f(self.colorLocation, *model['color'])
             glBindVertexArray(model['vao'])
             
-            # Cambiamos glDrawArrays por glDrawElements
             glDrawElements(GL_TRIANGLES, model['index_count'], GL_UNSIGNED_INT, None)
 
+    #crea un cuadrilátero que cubre la pantalla y permite aplicar efectos de ssao y blur
     def render_quad(self):
         if not hasattr(self, 'quadVAO'):
             self.quadVAO = glGenVertexArrays(1)
@@ -376,6 +369,7 @@ class App:
         glDrawArrays(GL_TRIANGLES, 0, 6)
         glBindVertexArray(0)
 
+    #libera memoria de todos los buffers y arrays que se crearon para el ejemplo
     def quit(self):
         for model in self.models:
             glDeleteVertexArrays(1, (model['vao'],))
