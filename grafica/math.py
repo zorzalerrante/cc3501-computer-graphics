@@ -1,7 +1,7 @@
 import numpy as np
-from numba import jit
+#from numba import jit
 
-@jit
+#@jit
 def normalize(x):
     x /= np.linalg.norm(x)
     return x
