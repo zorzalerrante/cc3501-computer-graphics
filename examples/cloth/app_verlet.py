@@ -5,23 +5,24 @@ from pathlib import Path
 
 import numpy as np
 import pyglet
+import click
 
 from pyglet.graphics.shader import Shader, ShaderProgram
-from cloth_utils import Cloth
+from .cloth_utils import Cloth
 from pyglet.math import Vec2
 
-if sys.path[0] != "":
-    sys.path.insert(0, "")
 
 from grafica.utils import load_pipeline
 import grafica.transformations as tr
 
-if __name__ == "__main__":
-    width, height = 1920, 1080
-    horizontal_resolution = 80
-    vertical_resolution = 50
-    spacing = 15
 
+@click.command("cloth_verlet", short_help='Simulación de tela usando una implementación ingenua de integración de Verlet')
+@click.option("--width", type=int, default=1920)
+@click.option("--height", type=int, default=1080)
+@click.option("--vertical_resolution", type=int, default=30)
+@click.option("--horizontal_resolution", type=int, default=60)
+@click.option("--spacing", type=int, default=15)
+def cloth_verlet(width, height, vertical_resolution, horizontal_resolution, spacing):
     half_width = width // 2
     half_height = height // 2
 

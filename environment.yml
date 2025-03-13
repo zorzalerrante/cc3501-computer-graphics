@@ -17,6 +17,7 @@ dependencies:
   - shapely
   - rtree
   - numba
+  - click
   - pip:
     - pyglet>=2.0.0
     - pymunk

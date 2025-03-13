@@ -7,17 +7,19 @@ import pyglet
 import pyglet.gl as GL
 import trimesh as tm
 
-if sys.path[0] != "":
-    sys.path.insert(0, "")
+import click
 
 import grafica.transformations as tr
 
-if __name__ == "__main__":
+@click.command("compositions", short_help='Ejemplo de composición de transformaciones')
+@click.option("--width", type=int, default=960)
+@click.option("--height", type=int, default=960)
+def compositions(width, height):
     try:
         config = pyglet.gl.Config(sample_buffers=1, samples=4)
-        window = pyglet.window.Window(960, 960, config=config)
+        window = pyglet.window.Window(width, height, config=config)
     except pyglet.window.NoSuchConfigException:
-        window = pyglet.window.Window(960, 960)
+        window = pyglet.window.Window(width, height)
 
     # elementos en nuestra escena
     # primero, el rectángulo que usaremos de fondo

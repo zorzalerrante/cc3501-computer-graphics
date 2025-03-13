@@ -16,19 +16,8 @@ class Point:
         self.force = gravity
 
     def bound(self, max_x, max_y):
-        if self.position.x < 0:
-            self.position.x = 0
-            self.previousPosition.x = self.position.x
-        if self.position.x > max_x:
-            self.position.x = max_x
-            self.previousPosition.x = self.position.x
-
-        if self.position.y < 0:
-            self.position.y = 0
-            self.previousPosition.y = self.position.y
-        if self.position.y > max_y:
-            self.position.y = max_y
-            self.previousPosition.y = self.position.y
+        self.previousPosition = self.position
+        self.position = self.position.clamp(Vec2(0,0), Vec2(max_x, max_y))
 
 
 class ClothSystem:

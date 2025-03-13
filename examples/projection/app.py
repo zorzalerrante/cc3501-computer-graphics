@@ -12,17 +12,14 @@ import trimesh as tm
 # en este caso, es la curvatura de la superficie
 from trimesh.curvature import discrete_gaussian_curvature_measure
 
-if sys.path[0] != "":
-    sys.path.insert(0, "")
+import click
 
 import grafica.transformations as tr
 
-if __name__ == "__main__":
-    # noten que esta vez guardamos el ancho y alto de nuestra ventana en variables.
-    # las usaremos
-    width = 960
-    height = 960
-
+@click.command("projection_example", short_help='Ejemplo de proyección')
+@click.option("--width", type=int, default=960)
+@click.option("--height", type=int, default=960)
+def projection_example(width, height):
     window = pyglet.window.Window(width, height)
 
     # primer elemento: el rectángulo de fondo

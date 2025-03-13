@@ -1,21 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
-
-if sys.path[0] != "":
-    sys.path.insert(0, "")
 
 from grafica.math import normalize
 import grafica.transformations as tr
-from raytracing import trace_ray, add_plane, add_sphere, add_mesh
+from .raytracing import trace_ray, add_plane, add_sphere, add_mesh
 import trimesh as tm
-
+import click
     
-if __name__ == "__main__":
-    # tamaño de la imagen
-    w = 1920
-    h = 1080
-
+@click.command("raytracing_cpu", short_help='Prueba de concepto de RT en la CPU')
+@click.argument("filename", type=str)
+@click.option("--width", type=int, default=320)
+@click.option("--height", type=int, default=280)
+def raytacing_cpu(filename, width, height):
     #NUEVO: Cargamos el modelo 3D
     charmander = tm.load("assets/Charmander.STL", force= "mesh")
     squirtle = tm.load("assets/Squirtle.STL", force= "mesh")
@@ -59,23 +55,23 @@ if __name__ == "__main__":
 
     # en este buffer guardaremos la imagen
     # noten que está traspuesta dado que no estamos trabajando con OpenGL, sino numpy
-    img = np.zeros((h, w, 3))
+    img = np.zeros((height, width, 3))
 
     # ¿cómo mapear a coordenadas de la pantalla?
     # x0, y0, x1, y1
     # (aquí debiésemos usar una matriz de proyección)
-    r = float(w) / h
+    r = float(width) / height
     S = (-1., -1. / r + .25, 1., 1. / r + .25)
 
     # iteramos en cada píxel.
     # aquí se hace de manera secuencial
     # pero hay mucho de esto que podría paralelizarse
-    for i, x in enumerate(np.linspace(S[0], S[2], w)):
+    for i, x in enumerate(np.linspace(S[0], S[2], width)):
         # esto imprime el progreso
         if i % 10 == 0:
-            print(i / float(w) * 100, "%")
+            print(i / float(width) * 100, "%")
 
-        for j, y in enumerate(np.linspace(S[1], S[3], h)):
+        for j, y in enumerate(np.linspace(S[1], S[3], height)):
             # reseteamos el color
             col[:] = 0
             # actualizamos la dirección del rayo
@@ -104,8 +100,8 @@ if __name__ == "__main__":
                 reflection *= obj.get('reflection', 1.)
 
             # guardamos el color final en el píxel
-            img[h - j - 1, i, :] = np.clip(col, 0, 1)
+            img[height - j - 1, i, :] = np.clip(col, 0, 1)
 
     # guardamos la imagen.
     # nota: ¡fíjense en el aliasing de la imagen!
-    plt.imsave('fig.png', img)
+    plt.imsave(filename, img)

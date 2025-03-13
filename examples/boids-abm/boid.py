@@ -6,7 +6,6 @@ import numpy as np
 class Boid(mesa.Agent):
     def __init__(
         self,
-        unique_id,
         model,
         pos,
         speed,
@@ -17,7 +16,7 @@ class Boid(mesa.Agent):
         separation_factor=0.25,
         match_factor=0.04,
     ):
-        super().__init__(unique_id, model)
+        super().__init__(model)
         self.pos = np.array(pos)
         self.speed = speed
         self.velocity = velocity

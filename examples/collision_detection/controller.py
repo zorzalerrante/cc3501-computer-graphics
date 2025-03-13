@@ -1,16 +1,14 @@
 import pyglet
 from OpenGL.GL import *
 
-import sys, os.path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # We will need double linked lists because we are going to remove elements at the beginning
 # But also add many at the end
 
 import grafica.transformations as tr
 
-from models import ObstacleManager, GameState
-from moving_shader import MovingShader2D
+from .models import ObstacleManager, GameState
+from .moving_shader import MovingShader2D
 
 
 class Controller(pyglet.window.Window):

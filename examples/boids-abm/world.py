@@ -2,7 +2,7 @@
 import mesa
 import numpy as np
 
-from boid import Boid
+from .boid import Boid
 from scipy import spatial
 import time
 
@@ -21,11 +21,12 @@ class World(mesa.Model):
         separation_factor=0.25,
         match_factor=0.04,
     ):
+        super().__init__(seed=666)
         self.population = population
         self.vision = vision
         self.speed = speed
         self.distance = distance
-        self.schedule = mesa.time.RandomActivation(self)
+        #self.schedule = mesa.time.RandomActivation(self)
         self.space = mesa.space.ContinuousSpace(width, height, True)
         self.factors = dict(cohere_factor=cohere_factor, separation_factor=separation_factor, match_factor=match_factor)
         self.make_agents()
@@ -39,7 +40,6 @@ class World(mesa.Model):
             pos = np.array((x, y))
             velocity = np.random.random(2) * 2 - 1
             boid = Boid(
-                i,
                 self,
                 pos,
                 self.speed,
@@ -49,13 +49,13 @@ class World(mesa.Model):
                 **self.factors
             )
             self.space.place_agent(boid, pos)
-            self.schedule.add(boid)
             self.id_to_agent[i] = boid
 
     def step(self):
         self.tree = spatial.KDTree([boid.pos for boid in self.id_to_agent.values()])
         #print(self.tree)
-        self.schedule.step()
+        #self.schedule.step()
+        self.agents.shuffle_do('step')
 
     def iter_agents(self):
         yield from self.space._agent_to_index.keys()

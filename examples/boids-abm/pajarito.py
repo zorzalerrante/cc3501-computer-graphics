@@ -6,9 +6,6 @@ import OpenGL.GL as GL
 
 import sys
 
-if sys.path[0] != "":
-    sys.path.insert(0, "")
-
 import grafica.transformations as tr
 from grafica.textures import texture_2D_setup
 from grafica.utils import load_pipeline

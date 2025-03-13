@@ -8,9 +8,7 @@ import pyglet
 import pyglet.gl as GL
 import trimesh as tm
 
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.dirname((os.path.abspath(__file__)))))
-)
+import click
 
 import grafica.transformations as tr
 
@@ -105,10 +103,10 @@ def update_solar_system(dt, window):
     )
 
 
-if __name__ == "__main__":
-    width = 960
-    height = 960
-
+@click.command("solar_system", short_help='Sistema solar con grafos de escena')
+@click.option("--width", type=int, default=960)
+@click.option("--height", type=int, default=960)
+def solar_system(width, height):
     window = pyglet.window.Window(width, height)
 
     # cargamos una esfera y la convertimos en una bola de diámetro 1

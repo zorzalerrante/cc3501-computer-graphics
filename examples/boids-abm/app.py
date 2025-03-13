@@ -1,17 +1,15 @@
 import numpy as np
 import pyglet
 import OpenGL.GL as GL
-import sys
-
-if sys.path[0] != "":
-    sys.path.insert(0, "")
 
 import grafica.transformations as tr
-from world import World
-from pajarito import Pajarito
-from grid import Grid
+from .world import World
+from .pajarito import Pajarito
+from .grid import Grid
 
 from pathlib import Path
+
+import click
 
 # variables del estado del programa
 program_state = {
@@ -31,18 +29,19 @@ world_parameters = {
     "speed": {"min": 0.01, "max": 1.0, "default": 0.75},
 }
 
-
-def main():
-    window = pyglet.window.Window(width=1024, height=768)
-
+@click.command("boids_abm", short_help='Simulador de vuelo de pajaritos usando Agent-Based Modeling')
+@click.option("--n_pajaritos", type=int, default=50)
+@click.option("--width", type=int, default=1024)
+@click.option("--height", type=int, default=768)
+@click.option("--world_width", type=int, default=960)
+@click.option("--world_height", type=int, default=540)
+def boids_abm(n_pajaritos, width, height, world_width, world_height):
     # noten que el tamaño de la ventana es independiente del tamaño del mundo.
-    world_width = 960
-    world_height = 540
+    window = pyglet.window.Window(width=width, height=height)
 
     # este es el mundo a simular.
     flock = World(
-        # con 50 pajaritos
-        50,
+        n_pajaritos,
         # y muchos parámetros
         width=world_width,
         height=world_height,
@@ -86,7 +85,7 @@ def main():
 
         # los valores de la slider van entre 1 y 100. así que debemos
         # normalizar el valor para que coincida con los de nuestras variables.
-        def slider_update(value):
+        def slider_update(widget, value):
             current_value = (value / 100) * (max_value - min_value) + min_value
             print(current_attr, current_value)
             for boid in flock.iter_agents():
@@ -114,7 +113,7 @@ def main():
         sliders[attr].value = (
             world_parameters[attr]["default"] - world_parameters[attr]["min"]
         ) / (world_parameters[attr]["max"] - world_parameters[attr]["min"])
-        sliders[attr].on_change(sliders[attr].value)
+        sliders[attr].on_change(sliders[attr], sliders[attr].value)
 
         # con esto incorporamos el elemento GUI o "widget" en la ventana
         # eso permite interactuar con él.

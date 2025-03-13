@@ -4,10 +4,12 @@ import trimesh as tm
 import numpy as np
 import os
 from pathlib import Path
+import click
 
-if __name__ == "__main__":
-    width = 800
-    height = 600
+@click.command("color_wheel", short_help='Ejemplo de espacios de color')
+@click.option("--width", type=int, default=800)
+@click.option("--height", type=int, default=600)
+def color_wheel(width, height):
     win = pyglet.window.Window(width, height)
 
     vertices = np.array(

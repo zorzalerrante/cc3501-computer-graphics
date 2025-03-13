@@ -12,8 +12,7 @@ from pyglet.graphics.shader import Shader, ShaderProgram
 # para calcular inversa
 from scipy import linalg
 
-if sys.path[0] != "":
-    sys.path.insert(0, "")
+import click
 
 from grafica.utils import load_pipeline
 import grafica.transformations as tr
@@ -43,10 +42,11 @@ class Particle(object):
         return bool(self.ttl > 0)
 
 
-if __name__ == "__main__":
-    width = 900
-    height = 600
-
+@click.command("particles", short_help='Partículas simples')
+@click.option("--width", type=int, default=900)
+@click.option("--height", type=int, default=600)
+@click.option("--max_ttl", type=int, default=3)
+def particulas(width, height, max_ttl):
     win = pyglet.window.Window(width, height)
 
     pipeline = load_pipeline(
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     pipeline.use()
     pipeline["projection"] = projection.reshape(16, 1, order="F")
     pipeline["view"] = view.reshape(16, 1, order="F")
-    pipeline["max_ttl"] = 3
+    pipeline["max_ttl"] = max_ttl
 
     # nuestra colección de partículas.
     # ¿por qué es una deque (cola)?

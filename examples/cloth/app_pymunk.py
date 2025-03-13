@@ -2,12 +2,12 @@ import os
 import sys
 from itertools import chain
 from pathlib import Path
-
+import click
 import numpy as np
 import pyglet
 
 from pyglet.graphics.shader import Shader, ShaderProgram
-from cloth_utils import Cloth
+from .cloth_utils import Cloth
 from pyglet.math import Vec2
 
 import pymunk
@@ -18,12 +18,13 @@ if sys.path[0] != "":
 from grafica.utils import load_pipeline
 import grafica.transformations as tr
 
-if __name__ == "__main__":
-    width, height = 1920, 1080
-    horizontal_resolution = 60
-    vertical_resolution = 30
-    spacing = 15
-
+@click.command("cloth_pymunk", short_help='Simulación de tela con pymunk')
+@click.option("--width", type=int, default=1920)
+@click.option("--height", type=int, default=1080)
+@click.option("--vertical_resolution", type=int, default=30)
+@click.option("--horizontal_resolution", type=int, default=60)
+@click.option("--spacing", type=int, default=15)
+def cloth_pymunk(width, height, vertical_resolution, horizontal_resolution, spacing):
     half_width = width // 2
     half_height = height // 2
 

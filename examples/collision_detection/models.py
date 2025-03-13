@@ -13,8 +13,8 @@ import grafica.easy_shaders as es
 
 
 from grafica.assets_path import getAssetPath
-from moving_shader import MovingShader2D
-from globals import Constants
+from .moving_shader import MovingShader2D
+from .globals import Constants
 
 
 

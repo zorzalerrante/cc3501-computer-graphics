@@ -9,16 +9,14 @@ from itertools import chain
 # pymunk es una biblioteca de simulación física que utiliza el motor chipmunk
 import pymunk
 
-import sys
-
-if sys.path[0] != "":
-    sys.path.insert(0, "")
+import click
 
 import grafica.transformations as tr
 
-if __name__ == "__main__":
-    width = 960
-    height = 960
+@click.command("falling_boxes", short_help='Ejemplo de uso de Pymunk')
+@click.option("--width", type=int, default=960)
+@click.option("--height", type=int, default=960)
+def falling_boxes(width, height):
     window = pyglet.window.Window(width, height)
 
     # usaremos un cubo para graficar los objetos que pondremos en el mundo.

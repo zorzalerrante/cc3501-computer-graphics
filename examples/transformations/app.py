@@ -5,27 +5,20 @@ import numpy as np
 import os
 from pathlib import Path
 
-# Nota:
-# Queremos usar el código que está en el módulo grafica
-# ubicado en la raíz del repositorio. 
-# como ejecutamos el código desde esa raíz, tenemos que agregar
-# el módulo a las rutas de búsqueda de módulos del intérprete de Python
-# lo ideal sería instalar el módulo gráfica como una biblioteca
-# pero no es una biblioteca aún :)
-import sys
-if sys.path[0] != '':
-    sys.path.insert(0, '')
+import click
 
-# ahora sí podemos importar funcionalidad desde grafica
 import grafica.transformations as tr
 
 
-if __name__ == "__main__":
+@click.command("transformed_bunny", short_help='Ejemplo de transformaciones con el conejo de Stanford')
+@click.option("--width", type=int, default=960)
+@click.option("--height", type=int, default=960)
+def transformed_bunny(width, height):
     try:
         config = pyglet.gl.Config(sample_buffers=1, samples=4)
-        window = pyglet.window.Window(960, 960, config=config)
+        window = pyglet.window.Window(width, height, config=config)
     except pyglet.window.NoSuchConfigException:
-        window = pyglet.window.Window(960, 960)
+        window = pyglet.window.Window(width, height)
 
     bunny = tm.load("assets/Stanford_Bunny.stl")
 

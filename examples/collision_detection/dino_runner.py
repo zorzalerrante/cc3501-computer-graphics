@@ -1,14 +1,13 @@
 import pyglet
 from OpenGL.GL import *
 
-import sys, os.path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import click
 
-from models import Player
-from controller import Controller
+from .models import Player
+from .controller import Controller
 
-from models import GameState, ObstacleManager
-from moving_shader import MovingShader2D
+from .models import GameState, ObstacleManager
+from .moving_shader import MovingShader2D
 
 """
 The idea of this project is to something way more complex. Since this is an advanced lesson,
@@ -17,8 +16,8 @@ The code related to rendering, input and view is in the class/file controller.py
 The logic is located in the models.py file
 """
 
-
-if __name__ == '__main__':
+@click.command("dino_runner", short_help='Ejemplo de detección de colisiones en 2D')
+def dino_game():
     # We add this import here only to make it more explicit
     # note that we are importing a variable instead of a class
     game_state = GameState()
