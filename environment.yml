@@ -16,7 +16,6 @@ dependencies:
   - cffi
   - shapely
   - rtree
-  - numba
   - click
   - pip:
     - pyglet>=2.0.0

@@ -51,7 +51,7 @@ class Grid(object):
         with open(
             Path(os.path.dirname(__file__))
             / ".."
-            / "hello_box2d"
+            / "pymunk_boxes"
             / "vertex_program.glsl"
         ) as f:
             vertex_source_code = f.read()
@@ -59,7 +59,7 @@ class Grid(object):
         with open(
             Path(os.path.dirname(__file__))
             / ".."
-            / "hello_box2d"
+            / "pymunk_boxes"
             / "fragment_program.glsl"
         ) as f:
             fragment_source_code = f.read()
