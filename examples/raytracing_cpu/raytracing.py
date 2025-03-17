@@ -1,4 +1,3 @@
-from numba import jit
 import numpy as np
 from grafica.math import normalize
 
@@ -8,7 +7,6 @@ from grafica.math import normalize
 # para que funcione con mallas arbitrarias y otros elementos del curso
 
 
-@jit
 def intersect_plane(O, D, P, N):
     """
     Retorna la distancia desde O a la intersección del rayo (O, D) con el

@@ -13,6 +13,13 @@ def grafica_cli():
 from examples.image_pixel import image_pixel_viewer
 grafica_cli.add_command(image_pixel_viewer)
 
+# clase 2 - gpu y opengl
+from examples.color import color_wheel
+grafica_cli.add_command(color_wheel)
+
+from examples.hello_world import hola_mundo
+grafica_cli.add_command(hola_mundo)
+
 # el resto (los categorizaremos más adelante)
 from examples.arcball import arcball_example
 grafica_cli.add_command(arcball_example)
@@ -30,14 +37,12 @@ grafica_cli.add_command(boids.boids_abm)
 from examples.collision_detection.dino_runner import dino_game
 grafica_cli.add_command(dino_game)
 
-from examples.color.app import color_wheel
-grafica_cli.add_command(color_wheel)
+
 
 from examples.hello_opengl import hola_opengl
 grafica_cli.add_command(hola_opengl)
 
-from examples.hello_world import hola_mundo
-grafica_cli.add_command(hola_mundo)
+
 
 from examples.particles.app import particulas
 grafica_cli.add_command(particulas)

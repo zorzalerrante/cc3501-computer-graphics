@@ -10,14 +10,7 @@ from pathlib import Path
 @click.option("--width", type=int, default=960)
 @click.option("--height", type=int, default=960)
 def hola_opengl(width, height):
-    try:
-        # si queremos más calidad visual (a un costo, claro)
-        # podemos activar antialiasing en caso de que esté disponible
-        config = pyglet.gl.Config(sample_buffers=1, samples=4)
-        window = pyglet.window.Window(width, height, config=config)
-    except pyglet.window.NoSuchConfigException:
-        # si no está disponible, hacemos una ventana normal
-        window = pyglet.window.Window(width, height)
+    window = pyglet.window.Window(width, height)
 
     # cargaremos el modelo del conejo de Stanford.
     # esta es la versión descargable desde Wikipedia
