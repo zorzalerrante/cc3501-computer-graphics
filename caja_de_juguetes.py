@@ -20,6 +20,13 @@ grafica_cli.add_command(color_wheel)
 from examples.hello_world import hola_mundo
 grafica_cli.add_command(hola_mundo)
 
+# clase 3 - texturas, sistemas dinámicos y atractores
+from examples.image_texture import image_viewer
+grafica_cli.add_command(image_viewer)
+
+from examples.sr_jengibre import sr_jengibre
+grafica_cli.add_command(sr_jengibre)
+
 # el resto (los categorizaremos más adelante)
 from examples.arcball import arcball_example
 grafica_cli.add_command(arcball_example)
