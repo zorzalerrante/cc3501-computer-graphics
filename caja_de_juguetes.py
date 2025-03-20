@@ -20,6 +20,11 @@ grafica_cli.add_command(color_wheel)
 from examples.hello_world import hola_mundo
 grafica_cli.add_command(hola_mundo)
 
+# clase auxiliar
+
+from examples.chroma_key import chroma_key
+grafica_cli.add_command(chroma_key)
+
 # clase 3 - texturas, sistemas dinámicos y atractores
 from examples.image_texture import image_viewer
 grafica_cli.add_command(image_viewer)
