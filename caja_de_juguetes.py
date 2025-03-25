@@ -32,6 +32,11 @@ grafica_cli.add_command(image_viewer)
 from examples.sr_jengibre import sr_jengibre
 grafica_cli.add_command(sr_jengibre)
 
+# clase 4 - sistemas de partículas
+
+from examples.particles.app import particulas
+grafica_cli.add_command(particulas)
+
 # el resto (los categorizaremos más adelante)
 from examples.arcball import arcball_example
 grafica_cli.add_command(arcball_example)
@@ -53,11 +58,6 @@ grafica_cli.add_command(dino_game)
 
 from examples.hello_opengl import hola_opengl
 grafica_cli.add_command(hola_opengl)
-
-
-
-from examples.particles.app import particulas
-grafica_cli.add_command(particulas)
 
 from examples.projection.app import projection_example
 grafica_cli.add_command(projection_example)

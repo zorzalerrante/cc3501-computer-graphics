@@ -1,144 +1,205 @@
 import os
-import sys
 from collections import deque
-from itertools import chain
 from pathlib import Path
+import random
 
 import numpy as np
 import OpenGL.GL as GL
 import pyglet
-from pyglet.graphics.shader import Shader, ShaderProgram
-
-# para calcular inversa
-from scipy import linalg
 
 import click
 
 from grafica.utils import load_pipeline
-import grafica.transformations as tr
+from grafica.particle import Particle
 
-
-# definimos un objeto partícula
-class Particle(object):
-    def __init__(self, position, ttl):
-        self.position = np.array(position, dtype=np.float32)
-        # por simpleza asumiremos que tiene velocidad constante en el eje y, sin aceleraci[on]
-        self.velocity = np.array([0, -50, 0], dtype=np.float32)
-        # ttl es la abreviación de "time to live", es el tiempo de vida restante
-        self.ttl = ttl
-
-    def step(self, dt):
-        # en cada paso de la simulación pasan dos cosas.
-        # por un lado, se reduce el tiempo de vida de la partícula
-        self.ttl = self.ttl - dt
-        # por otro, debemos actualizar su posición
-        # en este caso sabemos que la velocidad siempre apunta en la misma dirección
-        # pero en una aplicación más avanzada hay que calcular la velocidad
-        # usamos el método de Euler
-        self.position = self.position + dt * self.velocity
-
-    def alive(self):
-        # esta función utilitaria nos dice si la partícula está viva
-        return bool(self.ttl > 0)
-
-
-@click.command("particles", short_help='Partículas simples')
+@click.command("particles", short_help='Partículas simples con comportamiento basado en fuerzas')
 @click.option("--width", type=int, default=900)
 @click.option("--height", type=int, default=600)
 @click.option("--max_ttl", type=int, default=3)
-def particulas(width, height, max_ttl):
+@click.option("--emission_rate", type=int, default=3, help="Partículas emitidas por frame")
+def particulas(width, height, max_ttl, emission_rate):
     win = pyglet.window.Window(width, height)
+    boundaries = (width, height)
 
     pipeline = load_pipeline(
         Path(os.path.dirname(__file__)) / "point_vertex_program.glsl",
         Path(os.path.dirname(__file__)) / "point_fragment_program.glsl",
     )
 
-    # trabajaremos con una escena de 600x600
-    # y esta escena se verá en toda la pantalla
-    projection = tr.ortho(0, 600.0, 0, 600.0, 0.001, 10.0)
-
-    # especificamos la cámara en coordenadas de la escena
-    view = tr.lookAt(
-        # posición de la cámara
-        np.array([300.0, 300.0, 1.0]),
-        # hacia dónde apunta
-        np.array([300.0, 300.0, 0.0]),
-        # vector para orientarla (arriba)
-        np.array([0.0, 1.0, 0.0]),
-    )
-
-    # tendremos que convertir las coordenadas de la pantalla a coordenadas de la escena
-    # para ello calculamos esta inversa
-    inv_view_proj = linalg.inv(projection @ view)
-
     pipeline.use()
-    pipeline["projection"] = projection.reshape(16, 1, order="F")
-    pipeline["view"] = view.reshape(16, 1, order="F")
     pipeline["max_ttl"] = max_ttl
+    pipeline['resolution'] = (width, height)
 
-    # nuestra colección de partículas.
-    # ¿por qué es una deque (cola)?
-    win.particles = deque()
-    # Guardaremos una referencia a los datos que tendremos en la GPU.
-    # La necesitaremos más tarde, porque los datos de las partículas
-    # cambian todo el tiempo.
-    win.particle_data = None
+    # Colección de partículas
+    particles = deque()
+    particle_data = None
+    
+    # Tiempo global
+    time = 0.0
+    
+    # Última posición del mouse
+    last_mouse_pos = np.array([width // 2, height // 2], dtype=np.float32)
+
+    def create_particle(position):
+        """Función para crear partículas con propiedades personalizadas."""
+        # Velocidad inicial aleatoria en todas direcciones
+        angle = random.uniform(0, 2*np.pi)
+        speed = random.uniform(10, 80)
+        velocity = np.array([
+            speed * np.cos(angle), 
+            speed * np.sin(angle) - 30
+        ], dtype=np.float32)
+        
+        # Aceleración inicial (gravedad)
+        acceleration = np.array([0, -98], dtype=np.float32)
+        
+        # Masa y tiempo de vida variables
+        mass = random.uniform(0.8, 1.2)
+        ttl = max_ttl * random.uniform(0.7, 1.3)
+        
+        return Particle(position, velocity, acceleration, mass, ttl)
+
+    def apply_forces(particle):
+        """Función que aplica todas las fuerzas a una partícula."""
+        # 1. Gravedad (siempre presente)
+        particle.apply_force(np.array([0, -98], dtype=np.float32))
+        
+        # 2. Viento oscilante
+        wind_force = np.array([20 * np.sin(time * 0.5), 0], dtype=np.float32)
+        particle.apply_force(wind_force)
+        
+        # 3. Turbulencia aleatoria
+        turbulence = np.random.uniform(-10, 10, 2).astype(np.float32)
+        particle.apply_force(turbulence)
+        
+        # 4. Repulsión de los bordes
+        width, height = boundaries
+        edge_margin = 50
+        
+        # Calculamos distancias a los bordes
+        dist_left = particle.position[0]
+        dist_right = width - particle.position[0]
+        dist_bottom = particle.position[1]
+        dist_top = height - particle.position[1]
+        
+        # Creamos vector de repulsión
+        repulsion = np.zeros(2, dtype=np.float32)
+        
+        # Aplicamos repulsión si está cerca de los bordes
+        if dist_left < edge_margin:
+            repulsion[0] += 5 * (edge_margin - dist_left)
+        elif dist_right < edge_margin:
+            repulsion[0] -= 5 * (edge_margin - dist_right)
+            
+        if dist_bottom < edge_margin:
+            repulsion[1] += 5 * (edge_margin - dist_bottom)
+        elif dist_top < edge_margin:
+            repulsion[1] -= 5 * (edge_margin - dist_top)
+            
+        particle.apply_force(repulsion)
+
+    def handle_boundary_collisions(particle):
+        """Función para manejar colisiones con los límites de la ventana."""
+        width, height = boundaries
+        
+        # Colisiones en X
+        if particle.position[0] < 0:
+            particle.position[0] = 0
+            particle.velocity[0] *= -0.7  # Amortiguación
+        elif particle.position[0] > width:
+            particle.position[0] = width
+            particle.velocity[0] *= -0.7
+            
+        # Colisiones en Y
+        if particle.position[1] < 0:
+            particle.position[1] = 0
+            particle.velocity[1] *= -0.6  # Más amortiguación para el suelo
+        elif particle.position[1] > height:
+            particle.position[1] = height
+            particle.velocity[1] *= -0.7
 
     @win.event
     def on_draw():
         win.clear()
-        # usaremos esto en el shader, porque dibujaremos GL_POINTS
         GL.glEnable(GL.GL_PROGRAM_POINT_SIZE)
         GL.glEnable(GL.GL_BLEND)
         GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
 
         pipeline.use()
 
-        # si no tenemos partículas, no dibujamos
-        if win.particle_data is not None:
-            win.particle_data.draw(pyglet.gl.GL_POINTS)
+        if particle_data is not None:
+            particle_data.draw(pyglet.gl.GL_POINTS)
 
     @win.event
     def on_mouse_motion(x, y, dx, dy):
-        # convertimos las coordenadas de la pantalla
-        # (que fueron calculadas en la etapa de SCREEN MAPPING)
-        # a coordenadas del volumen normalizado: entre -1 y 1
-        norm_screen_x = (x / width) * 2 - 1
-        norm_screen_y = (y / height) * 2 - 1
+        nonlocal last_mouse_pos
+        # Actualizar posición del mouse
+        last_mouse_pos = np.array([x, y], dtype=np.float32)
+        
+        # Emitir algunas partículas al mover el mouse
+        for _ in range(2):
+            # Variación en la posición
+            jitter = np.random.uniform(-10, 10, 2).astype(np.float32)
+            pos = last_mouse_pos + jitter
+            particles.append(create_particle(pos))
 
-        # "desproyectamos"
-        result = inv_view_proj @ np.array([norm_screen_x, norm_screen_y, 0.0, 1.0])
-
-        # y el resultado se lo asignamos a una partícula
-        win.particles.append(Particle((result[0], result[1], 0.0), 3))
+    def emit_particles(dt, win):
+        # Emitir continuamente partículas
+        for _ in range(emission_rate):
+            # Variación en la posición
+            jitter = np.random.uniform(-15, 15, 2).astype(np.float32)
+            pos = last_mouse_pos + jitter
+            particles.append(create_particle(pos))
 
     def update_particle_system(dt, win):
-        # primero debemos revisar cuales partículas ya no están vivas
-        to_remove = 0
-        for i, p in enumerate(win.particles):
-            p.step(dt)
-
-            if not p.alive():
-                to_remove += 1
-
-        # descartamos a las que dejaron de vivir
-        for i in range(to_remove):
-            win.particles.popleft()
-
-        if win.particle_data is not None:
-            win.particle_data.delete()
-            win.particle_data = None
-
-        # si hay partículas vivas, hay que copiarlas a la GPU
-        if len(win.particles) > 0:
-            win.particle_data = pipeline.vertex_list(
-                len(win.particles), pyglet.gl.GL_POINTS, position="f", ttl="f"
+        # Incrementar tiempo global
+        nonlocal time, particle_data
+        time += dt
+        
+        # Actualizar todas las partículas
+        for particle in particles:
+            # Actualizar estado físico
+            particle.update(dt, apply_forces)
+            
+            # Manejar colisiones con los límites
+            handle_boundary_collisions(particle)
+        
+        # Eliminar partículas muertas
+        while particles and not particles[0].alive:
+            particles.popleft()
+        
+        # Limitar número máximo de partículas
+        max_particles = 500
+        while len(particles) > max_particles:
+            particles.popleft()
+        
+        # Actualizar datos en GPU
+        if particle_data is not None:
+            particle_data.delete()
+            particle_data = None
+        
+        num_particles = len(particles)
+        if num_particles > 0:
+            # Crear vertex_list
+            particle_data = pipeline.vertex_list(
+                num_particles, pyglet.gl.GL_POINTS, position="f", ttl="f"
             )
-            win.particle_data.position[:] = np.array(
-                list(chain(*(p.position for p in win.particles)))
-            )
-            win.particle_data.ttl[:] = np.array(list(p.ttl for p in win.particles))
+            
+            # Preparar datos de manera optimizada
+            positions = np.zeros(num_particles * 2, dtype=np.float32)
+            ttls = np.zeros(num_particles, dtype=np.float32)
+            
+            # Llenar arrays de manera optimizada
+            for i, p in enumerate(particles):
+                positions[i*2:i*2+2] = p.position
+                ttls[i] = p.ttl
+            
+            # Enviar a GPU
+            particle_data.position[:] = positions
+            particle_data.ttl[:] = ttls
 
+    # Programar actualización y emisión
+    pyglet.clock.schedule(emit_particles, win)
     pyglet.clock.schedule(update_particle_system, win)
+    
     pyglet.app.run()
