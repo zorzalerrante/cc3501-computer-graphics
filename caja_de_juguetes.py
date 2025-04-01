@@ -37,6 +37,10 @@ grafica_cli.add_command(sr_jengibre)
 from examples.particles.app import particulas
 grafica_cli.add_command(particulas)
 
+# clase 6 - agentes / boids
+boids = importlib.import_module('examples.boids-particles')
+grafica_cli.add_command(boids.boids_particles)
+
 # el resto (los categorizaremos más adelante)
 from examples.arcball import arcball_example
 grafica_cli.add_command(arcball_example)
