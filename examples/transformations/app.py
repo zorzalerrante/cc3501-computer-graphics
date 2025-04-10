@@ -39,7 +39,7 @@ def transformed_bunny(width, height):
 
     # queremos hacer un conejito que gire y gire sin pasar
     # usaremos este diccionario para almacenar el estado del conejito
-    window.bunny_state = {
+    bunny_state = {
         'angle': 0.0,
         'total_time': 0.0,
         'transform': tr.identity()
@@ -83,7 +83,7 @@ def transformed_bunny(width, height):
         # por eso ejecutamos reshape(16, 1, order='F') 
         # el parámetro order se refiere a si se realiza por filas o por columnas
         # Nota: F no es por filas, es por Columnas. la F viene de Fortran ;)
-        pipeline["view_transform"] = window.bunny_state['transform'].reshape(16, 1, order="F")
+        pipeline["view_transform"] = bunny_state['transform'].reshape(16, 1, order="F")
 
         # la función de dibujo es esencialmente la misma.
         # lo que ha cambiado es el parámetro que recibe el vertex program
@@ -95,9 +95,9 @@ def transformed_bunny(width, height):
     def update_world(dt, window):
         # el parámetro dt es delta time
         # cuánto tiempo (en segundos) ha pasado desde la última ejecución
-        window.bunny_state['total_time'] += dt
-        window.bunny_state['angle'] = window.bunny_state['total_time']
-        window.bunny_state['transform'] = tr.rotationY(window.bunny_state['total_time'])
+        bunny_state['total_time'] += dt
+        bunny_state['angle'] = bunny_state['total_time']
+        bunny_state['transform'] = tr.rotationY(bunny_state['total_time'])
 
     # aquí le pedimos a pyglet que ejecute nuestra función
     # noten que la ejecución de la actualización del mundo y de su graficación
