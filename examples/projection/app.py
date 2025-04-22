@@ -6,15 +6,13 @@ from pathlib import Path
 import numpy as np
 import pyglet
 import pyglet.gl as GL
-import trimesh as tm
-# importamos esta función de trimesh porque nos permitirá asignarle una propiedad a cada vértice
-# y pintaremos el conejo en función de esa propiedad
-# en este caso, es la curvatura de la superficie
-from trimesh.curvature import discrete_gaussian_curvature_measure
 
 import click
 
 import grafica.transformations as tr
+from grafica.utils import load_pipeline
+# esta vez pusimos todos nuestros elementos en un archivo extra
+from .elementos import rectangulo, stanford_bunny, regular_grid
 
 @click.command("projection_example", short_help='Ejemplo de proyección')
 @click.option("--width", type=int, default=960)
@@ -23,154 +21,60 @@ def projection_example(width, height):
     window = pyglet.window.Window(width, height)
 
     # primer elemento: el rectángulo de fondo
-    vertices = np.array(
-        [
-            -1, -1, 0.0,  # inf izq
-             1, -1, 0.0,  # if der
-             1,  1, 0.0,  # sup der
-            -1,  1, 0.0,  # sup izq
-        ],
-        dtype=np.float32,
-    )
-
-    vertex_colors = np.array(
-        [
-            1.0, 204 / 255.0, 1.0,  # inf izq
-            1.0, 204 / 255.0, 1.0,  # if der
-            204 / 255.0, 1.0, 1.0,  # sup der
-            204 / 255.0, 1.0, 1.0,  # sup izq
-        ],
-        dtype=np.float32,
-    )
-
-    indices = np.array([0, 1, 2, 2, 3, 0], dtype=np.uint32)
+    bg_rectangle = rectangulo()
 
     # reusamos nuestros shaders
-    with open(
-        Path(os.path.dirname(__file__)) / ".." / "hello_world" / "vertex_program.glsl"
-    ) as f:
-        vertex_source_code = f.read()
+    bg_pipeline = load_pipeline(
+        Path(os.path.dirname(__file__)) / ".." / "hello_world" / "vertex_program.glsl", 
+        Path(os.path.dirname(__file__)) / ".." / "hello_world" / "fragment_program.glsl") 
 
-    with open(
-        Path(os.path.dirname(__file__)) / ".." / "hello_world" / "fragment_program.glsl"
-    ) as f:
-        fragment_source_code = f.read()
+    bg_gpu_data = bg_pipeline.vertex_list_indexed(bg_rectangle['n_vertices'], bg_rectangle['gl_type'], bg_rectangle['indices'])
 
-    vert_shader = pyglet.graphics.shader.Shader(vertex_source_code, "vertex")
-    frag_shader = pyglet.graphics.shader.Shader(fragment_source_code, "fragment")
-    bg_pipeline = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)
-
-    bg_gpu_data = bg_pipeline.vertex_list_indexed(4, GL.GL_TRIANGLES, indices)
-    bg_gpu_data.position[:] = vertices
-    bg_gpu_data.color[:] = vertex_colors
+    bg_gpu_data.position[:] = bg_rectangle['position']
+    bg_gpu_data.color[:] = bg_rectangle['color']
 
     # segundo, el conejo
-    bunny = tm.load("assets/Stanford_Bunny.stl")
-
-    # model transform del conejo. la aplicamos directamente en trimesh
-    # noten que esta vez solamente escalamos al conejo, ¡no lo estamos rotando!
-    bunny_scale = tr.uniformScale(1.0 / bunny.scale)
-    bunny_translate = tr.translate(*-bunny.centroid)
-    bunny.apply_transform(bunny_scale @ bunny_translate)
-    # el conejo ya está transformado. pero lo movimos al origen, 
-    # cuando en realidad queremos que esté sobre el suelo
-    # con esto dejamos la parte baja del conejo en z = 0
-    # asumiento que z apunta hacia arriba en nuestro mundo
-    bunny.apply_transform(tr.translate(0, 0, -bunny.vertices[:, 2].min()))
-
-    # aquí calculamos la curvatura. pueden ver la documentación de trimesh para saber qué es.
-    bunny_curvature = discrete_gaussian_curvature_measure(bunny, bunny.vertices, 0.01)
-    # la curvatura está definida entre -1 y 1, así que la convertimos al rango 0 a 1.
-    # usaremos este valor para pintar cada vértice en el vertex shader
-    bunny_curvature = (bunny_curvature + 1) / 2
+    bunny = stanford_bunny()
 
     # cargamos el shader que usaremos para graficar al conejo
-    # noten que no cargamos fragment shader: usaremos el mismo del fondo.
-    # eso es posible porque ese shader solo pinta colores interpolados.
-    with open(Path(os.path.dirname(__file__)) / "mesh_vertex_program.glsl") as f:
-        vertex_source_code = f.read()
+    bunny_pipeline = load_pipeline(
+        Path(os.path.dirname(__file__)) / "mesh_vertex_program.glsl", 
+        Path(os.path.dirname(__file__)) / ".." / "hello_world" / "fragment_program.glsl")
 
-    vert_shader = pyglet.graphics.shader.Shader(vertex_source_code, "vertex")
-    frag_shader = pyglet.graphics.shader.Shader(fragment_source_code, "fragment")
-    bunny_pipeline = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)
-
-    bunny_vertex_list = tm.rendering.mesh_to_vertexlist(bunny)
     bunny_gpu = bunny_pipeline.vertex_list_indexed(
-        len(bunny_vertex_list[4][1]) // 3, GL.GL_TRIANGLES, bunny_vertex_list[3]
+        bunny['n_vertices'], bunny['gl_type'], bunny['indices']
     )
-    bunny_gpu.position[:] = bunny_vertex_list[4][1]
+    bunny_gpu.position[:] = bunny['position']
 
     # en este caso sabemos que trimesh nos entregó una "sopa de triángulos"
     # donde algunos vértices se repiten. entonces, no podemos entregarle directamente
     # la curvatura que hemos calculado.
     # así que construimos la curvatura correspondiente a cada vértice de cada triángulo
     # nos ayudamos de los índices de las caras (bunny.faces) y el método numpy.take
-    bunny_gpu.curvature[:] = np.take(bunny_curvature, bunny.faces).reshape(
-        -1, 1, order="C"
-    )
+    bunny_gpu.curvature[:] = bunny['curvature']
 
     # el tercer elemento es una grilla que graficaremos con GL_LINES (líneas)
     # nuevamente reusamos el fragment program. solo debemos cargar el vertex program
-    with open(Path(os.path.dirname(__file__)) / "grid_vertex_program.glsl") as f:
-        vertex_source_code = f.read()
-
-    vert_shader = pyglet.graphics.shader.Shader(vertex_source_code, "vertex")
-    frag_shader = pyglet.graphics.shader.Shader(fragment_source_code, "fragment")
-    grid_pipeline = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)
-
-    # construimos nuestra grilla.
-    grid_resolution = 10
-
-    xv, yv = np.meshgrid(
-        np.linspace(0, 1, grid_resolution),
-        np.linspace(0, 1, grid_resolution),
-        indexing="xy",
-    )
-
-    grid_vertices = np.vstack(
-        (
-            xv.reshape(1, -1),
-            yv.reshape(1, -1),
-            np.zeros(shape=(1, grid_resolution**2)),
-        )
-    ).T
-
-    grid_indices = [
-        [
-            (grid_resolution * row + i, grid_resolution * row + i + 1)
-            for i in range(grid_resolution - 1)
-        ]
-        for row in range(grid_resolution)
-    ]
+    grid = regular_grid(resolution=20)
     
-    grid_indices.extend(
-        [
-            [
-                (
-                    grid_resolution * column + i,
-                    grid_resolution * column + i + grid_resolution,
-                )
-                for i in range(grid_resolution)
-            ]
-            for column in range(grid_resolution - 1)
-        ]
-    )
-    
-    grid_indices = list(chain(*chain(*grid_indices)))
+    grid_pipeline = load_pipeline(
+        Path(os.path.dirname(__file__)) / "grid_vertex_program.glsl", 
+        Path(os.path.dirname(__file__)) / ".." / "hello_world" / "fragment_program.glsl")
+
     
     grid_gpu = grid_pipeline.vertex_list_indexed(
-        grid_resolution**2, GL.GL_LINES, grid_indices
+        grid['n_vertices'], grid['gl_type'], grid['indices']
     )
     
-    grid_gpu.position[:] = grid_vertices.reshape(-1, 1, order="C")
+    grid_gpu.position[:] = grid['position']
 
     # agregamos la vista y la proyección a nuestro estado de programa
-    window.program_state = {
+    total_time = 0.0
+    transformations = {
         # al conejo le aplicamos la identidad por ahora.
         "bunny": tr.identity(),
         # nuestra grilla se define entre 0 y 1, movámosla para centrarla en el origen
         "grid": tr.translate(-0.5, -0.5, 0),
-        "total_time": 0.0,
         # transformación de la vista
         "view": tr.lookAt(
             np.array([-1.0, 0, 0.25]),  # posición de la cámara
@@ -179,7 +83,43 @@ def projection_example(width, height):
         ),
         # transformación de proyección, en este caso, en perspectiva
         "projection": tr.perspective(60, width / height, 0.001, 5.0),
+        # Variable para controlar el tipo de proyección
+        "projection_type": "perspective",
     }
+
+    # Creamos las dos matrices de proyección que vamos a utilizar
+    perspective_projection = tr.perspective(60, width / height, 0.001, 5.0)
+    # Para la proyección isométrica usamos una matriz ortográfica
+    # Los parámetros son: izquierda, derecha, abajo, arriba, cerca, lejos
+    orthographic_projection = tr.ortho(-0.5, 0.5, -0.5, 0.5, 0.001, 5.0)
+    
+    # Modificamos la vista para la proyección isométrica cuando se active
+    # Una vista isométrica típica tiene ángulos iguales (120 grados) entre los ejes
+    isometric_view = tr.lookAt(
+        np.array([-0.7, -0.7, 0.7]),  # posición isométrica de la cámara
+        np.array([0, 0, 0.25]),        # hacia dónde apunta (mismo punto)
+        np.array([0.0, 0.0, 1.0])      # vector para orientarla (arriba)
+    )
+    
+    # Vista en perspectiva original
+    perspective_view = tr.lookAt(
+        np.array([-1.0, 0, 0.25]),     # posición de la cámara
+        np.array([0, 0, 0.25]),        # hacia dónde apunta
+        np.array([0.0, 0.0, 1.0])      # vector para orientarla (arriba)
+    )
+
+    @window.event
+    def on_key_press(symbol, modifiers):
+        if symbol == pyglet.window.key.P:
+            # Cambiamos entre proyección en perspectiva e isométrica
+            if transformations["projection_type"] == "perspective":
+                transformations["projection"] = orthographic_projection
+                transformations["view"] = isometric_view
+                transformations["projection_type"] = "isometric"
+            else:
+                transformations["projection"] = perspective_projection
+                transformations["view"] = perspective_view
+                transformations["projection_type"] = "perspective"
 
     @window.event
     def on_draw():
@@ -192,7 +132,7 @@ def projection_example(width, height):
         # desactivamos el test de profundidad porque el fondo es eso, un fondo
         GL.glDisable(GL.GL_DEPTH_TEST)
         bg_pipeline.use()
-        bg_gpu_data.draw(GL.GL_TRIANGLES)
+        bg_gpu_data.draw(bg_rectangle['gl_type'])
 
         # lo activamos a la hora de graficar nuestra escena
         GL.glEnable(GL.GL_DEPTH_TEST)
@@ -200,36 +140,36 @@ def projection_example(width, height):
         # hora de dibujar al conejo! activamos su shader
         bunny_pipeline.use()
 
-        bunny_pipeline["transform"] = window.program_state["bunny"].reshape(
+        bunny_pipeline["transform"] = transformations["bunny"].reshape(
             16, 1, order="F"
         )
         # le entregamos los nuevos parámetros al pipeline
-        bunny_pipeline["view"] = window.program_state["view"].reshape(16, 1, order="F")
-        bunny_pipeline["projection"] = window.program_state["projection"].reshape(
+        bunny_pipeline["view"] = transformations["view"].reshape(16, 1, order="F")
+        bunny_pipeline["projection"] = transformations["projection"].reshape(
             16, 1, order="F"
         )
-        bunny_gpu.draw(GL.GL_TRIANGLES)
+        bunny_gpu.draw(bunny['gl_type'])
 
         # ahora la grilla. activamos su shader y le pasamos los parámetros correspondientes
         grid_pipeline.use()
-        grid_pipeline["transform"] = window.program_state["grid"].reshape(
+        grid_pipeline["transform"] = transformations["grid"].reshape(
             16, 1, order="F"
         )
-        grid_pipeline["view"] = window.program_state["view"].reshape(16, 1, order="F")
-        grid_pipeline["projection"] = window.program_state["projection"].reshape(
+        grid_pipeline["view"] = transformations["view"].reshape(16, 1, order="F")
+        grid_pipeline["projection"] = transformations["projection"].reshape(
             16, 1, order="F"
         )
         # como dibujaremos líneas y no polígonos, debemos especificarlo en la llamada a draw
-        grid_gpu.draw(GL.GL_LINES)
+        grid_gpu.draw(grid['gl_type'])
 
     def update_world(dt, window):
-        window.program_state["total_time"] += dt
-        total_time = window.program_state["total_time"]
+        nonlocal total_time
+        total_time += dt
 
         # actualizamos la transformación del conejo.
         # esta vez respecto al eje Z, es decir, en el "mundo del conejo"
         # y no en las coordenadas de OpenGL :)
-        window.program_state["bunny"] = tr.rotationZ(total_time * 2.0)
+        transformations["bunny"] = tr.rotationZ(total_time * 2.0)
 
     pyglet.clock.schedule_interval(update_world, 1 / 60.0, window)
     pyglet.app.run(1 / 60.0)
