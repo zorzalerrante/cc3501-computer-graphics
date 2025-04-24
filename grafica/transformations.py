@@ -154,23 +154,11 @@ def frustum(left, right, bottom, top, near, far):
     t_b = top - bottom
     f_n = far - near
     return np.array([
-        [ 2 * near / r_l,
-        0,
-        (right + left) / r_l,
-        0],
-        [ 0,
-        2 * near / t_b,
-        (top + bottom) / t_b,
-        0],
-        [ 0,
-        0,
-        -(far + near) / f_n,
-        -2 * near * far / f_n],
-        [ 0,
-        0,
-        -1,
-        0]], dtype = np.float32)
-
+        [ 2 * near / r_l,              0, (right + left) / r_l,                     0],
+        [ 0             , 2 * near / t_b, (top + bottom) / t_b,                     0],
+        [ 0             ,              0,  -(far + near) / f_n, -2 * near * far / f_n],
+        [ 0             ,              0,                   -1,                     0]], 
+        dtype = np.float32)
 
 def perspective(fovy, aspect, near, far):
     halfHeight = np.tan(np.pi * fovy / 360) * near
