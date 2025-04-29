@@ -1,0 +1,13 @@
+# Material para el cubo de dado azul
+# MTL creado para ser usado con dice_cube.obj
+
+newmtl dice_blue
+Ka 0.2 0.2 0.2
+Kd 0.8 0.8 0.8
+Ks 0.1 0.1 0.1
+Ns 10.0       
+d 1.0         
+illum 2       
+
+# Mapa de textura de color - las 6 caras del dado
+map_Kd dice_blue.jpg

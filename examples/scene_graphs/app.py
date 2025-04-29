@@ -12,53 +12,6 @@ import grafica.transformations as tr
 from grafica.utils import load_pipeline
 from grafica.scenegraph import Scenegraph
 from grafica.scenegraph_premade import unit_axes_node
-from grafica.scenegraph_nodes import node_from_file, add_node_pipeline
-
-
-def create_solar_system(mesh, pipeline, axis, axis_pipeline):
-    # esta función crea nuestro grafo de escena.
-    # esencialmente hace lo siguiente:
-    # sol -> tierra -> luna
-    # pero cada elemento tiene a su vez dos nodos: geometry (su modelo 3d) y axis (su eje de coordenadas)
-    # lo hacemos todo con la biblioteca networkx.
-    # cosas como el pipeline correspondiente a cada malla y los atributos que reciben los pipelines
-    # son almacenadas como atributos de cada nodo de la red.
-    graph = Scenegraph("sun")
-
-    graph.add_transform("sun_geometry", tr.uniformScale(0.8))
-    graph.add_instance("sun_mesh", mesh, pipeline, color=np.array((1.0, 0.73, 0.03)))
-    graph.add_instance("sun_axis", axis, axis_pipeline, transform=tr.uniformScale(1))
-
-    graph.add_edge("sun", "sun_geometry")
-    graph.add_edge("sun_geometry", "sun_mesh")
-    graph.add_edge("sun", "sun_axis")
-
-    graph.add_transform("earth", tr.translate(2.5, 0.0, 0.0))
-    graph.add_transform("earth_geometry", tr.uniformScale(0.3))
-    graph.add_instance("earth_mesh", mesh, pipeline, color=np.array((0.0, 0.59, 0.78)))
-    graph.add_instance(
-        "earth_axis", axis, axis_pipeline, transform=tr.uniformScale(0.5)
-    )
-
-    graph.add_edge("sun", "earth")
-    graph.add_edge("earth", "earth_geometry")
-    graph.add_edge("earth_geometry", "earth_mesh")
-    graph.add_edge("earth", "earth_axis")
-
-    graph.add_transform("moon", tr.translate(0.5, 0.0, 0.0))
-    graph.add_transform("moon_geometry", tr.uniformScale(0.1))
-    graph.add_instance("moon_mesh", mesh, pipeline, color=np.array((0.6, 0.6, 0.6)))
-    graph.add_instance(
-        "moon_axis", axis, axis_pipeline, transform=tr.uniformScale(0.25)
-    )
-
-    graph.add_edge("earth", "moon")
-    graph.add_edge("moon", "moon_geometry")
-    graph.add_edge("moon_geometry", "moon_mesh")
-    graph.add_edge("moon", "moon_axis")
-
-    return graph
-
 
 @click.command("solar_system", short_help="Sistema solar con grafos de escena")
 @click.option("--width", type=int, default=960)
@@ -67,7 +20,7 @@ def solar_system(width, height):
     window = pyglet.window.Window(width, height)
 
     # cargamos una esfera y la convertimos en una bola de diámetro 1
-    mesh = node_from_file("assets/sphere.off")["children"][0]
+    #mesh = node_from_file("assets/sphere.off")
 
     solar_pipeline = load_pipeline(
         Path(os.path.dirname(__file__)) / "mesh_vertex_program.glsl",
@@ -77,9 +30,6 @@ def solar_system(width, height):
         / "fragment_program.glsl",
     )
 
-    add_node_pipeline(mesh, solar_pipeline)
-
-    axis = unit_axes_node()
 
     axis_pipeline = load_pipeline(
         Path(os.path.dirname(__file__)) / "line_vertex_program.glsl",
@@ -89,10 +39,47 @@ def solar_system(width, height):
         / "fragment_program.glsl",
     )
 
-    add_node_pipeline(axis, axis_pipeline)
+    #add_node_pipeline(axis, axis_pipeline)
 
     # creamos el grafo de escena con la función definida más arriba
-    graph = create_solar_system(mesh, solar_pipeline, axis, axis_pipeline)
+    graph = Scenegraph("sun")
+    graph.load_and_register_mesh('sphere', "assets/sphere.off")
+    graph.register_mesh('axis', unit_axes_node())
+    graph.register_pipeline('solar_pipeline', solar_pipeline)
+    graph.register_pipeline('axis_pipeline', axis_pipeline)
+
+    graph.add_transform("sun_geometry", tr.uniformScale(0.8))
+    graph.add_mesh_instance("sun_mesh", 'sphere', 'solar_pipeline', color=np.array((1.0, 0.73, 0.03)))
+    graph.add_mesh_instance("sun_axis", 'axis', 'axis_pipeline', transform=tr.uniformScale(1))
+
+    graph.add_edge("sun", "sun_geometry")
+    graph.add_edge("sun_geometry", "sun_mesh")
+    graph.add_edge("sun", "sun_axis")
+
+    graph.add_transform("earth", tr.translate(2.5, 0.0, 0.0))
+    graph.add_transform("earth_geometry", tr.uniformScale(0.3))
+    graph.add_mesh_instance("earth_mesh", 'sphere', 'solar_pipeline', color=np.array((0.0, 0.59, 0.78)))
+    graph.add_mesh_instance(
+        "earth_axis", 'axis', 'axis_pipeline', transform=tr.uniformScale(0.5)
+    )
+
+    graph.add_edge("sun", "earth")
+    graph.add_edge("earth", "earth_geometry")
+    graph.add_edge("earth_geometry", "earth_mesh")
+    graph.add_edge("earth", "earth_axis")
+
+    graph.add_transform("moon", tr.translate(0.5, 0.0, 0.0))
+    graph.add_transform("moon_geometry", tr.uniformScale(0.1))
+    graph.add_mesh_instance("moon_mesh", 'sphere', 'solar_pipeline', color=np.array((0.6, 0.6, 0.6)))
+    graph.add_mesh_instance(
+        "moon_axis", 'axis', 'axis_pipeline', transform=tr.uniformScale(0.25)
+    )
+
+    graph.add_edge("earth", "moon")
+    graph.add_edge("moon", "moon_geometry")
+    graph.add_edge("moon_geometry", "moon_mesh")
+    graph.add_edge("moon", "moon_axis")
+
 
     total_time = 0.0
     view = tr.lookAt(np.array([5, 5, 5]), np.array([0, 0, 0]), np.array([0, 1, 0]))
