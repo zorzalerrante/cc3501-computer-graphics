@@ -81,7 +81,8 @@ grafica_cli.add_command(compositions)
 from examples.transformations.app import transformed_bunny
 grafica_cli.add_command(transformed_bunny)
 
-
+from examples.disco_bunny.app import disco_bunny
+grafica_cli.add_command(disco_bunny)
 
 if __name__ == '__main__':
     grafica_cli()
