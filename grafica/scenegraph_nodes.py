@@ -6,15 +6,18 @@ import numpy as np
 from grafica.textures import texture_2D_setup
 
 
-def _node_from_mesh(mesh, id=None, parent=None, transform=None):
+def _node_from_mesh(mesh, id=None, parent=None, transform=None, fix_normals=True, smooth=True, smooth_threshold=100000):
     if transform is None:
         transform = tr.identity()
-    
-    vertex_list = tm.rendering.mesh_to_vertexlist(mesh)
+
+    if fix_normals:
+        mesh.fix_normals()
+
+    vertex_list = tm.rendering.mesh_to_vertexlist(mesh, smooth=smooth, smooth_threshold=smooth_threshold)
 
     node = {
+        'object': mesh,
         'mesh': {
-            'object': mesh,
             'n_vertices': len(vertex_list[4][1]) // 3,
             'texture': None
         },
@@ -45,7 +48,7 @@ def _node_from_mesh(mesh, id=None, parent=None, transform=None):
 
 
 
-def _node_from_file(filename, id=None, parent=None, rezero=True, normalize=True):
+def _node_from_file(filename, id=None, parent=None, rezero=True, normalize=True, fix_normals=True, smooth=True, smooth_threshold=100000):
     scene = tm.load(filename, force="scene")
     if rezero:
         scene.rezero()
@@ -60,11 +63,12 @@ def _node_from_file(filename, id=None, parent=None, rezero=True, normalize=True)
         'id': id,
         'children': [],
         'parent': parent,
-        'has_texture': False
+        'has_texture': False,
+        'object': scene
     }
 
     for object_id, object_geometry in scene.geometry.items():
-        node = _node_from_mesh(object_geometry)
+        node = _node_from_mesh(object_geometry, fix_normals=fix_normals, smooth=smooth, smooth_threshold=smooth_threshold)
         base['children'].append(node)
         base['has_texture'] = node['has_texture']
 

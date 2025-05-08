@@ -19,6 +19,7 @@ class Scenegraph(nx.DiGraph):
         self.meshes = {}
         self.pipelines = {}
         self.global_attributes = {}
+        self.global_transforms = {}
 
     def register_pipeline(self, name, pipeline):
         self.pipelines[name] = pipeline
@@ -52,7 +53,14 @@ class Scenegraph(nx.DiGraph):
             )
             self.add_edge(name, child_name)
 
-    def render(self, **pipeline_attrs):
+    def render(self, recalculate_transforms=True, **pipeline_attrs):
+        """
+        Renderiza el grafo de escena.
+        
+        Parámetros:
+        recalculate_transforms -- Si es True, recalcula las transformaciones globales
+        **pipeline_attrs -- Atributos adicionales para las pipelines
+        """
         # por cada pipeline, configuramos sus atributos uniform
         for pipeline_name, pipeline in self.pipelines.items():
             pipeline.use()
@@ -75,41 +83,22 @@ class Scenegraph(nx.DiGraph):
                     continue
 
             pipeline.stop()
-        # tenemos que hacer un recorrido basado en profundidad (DFS).
-        # networkx provee una función que nos entrega dicho recorrido!
-        # hay que recorrerlo desde un nodo raíz, que almacenamos como atributo del grafo
-        edges = list(nx.edge_dfs(self, source=self.root_key))
 
-        # a medida que nos movemos por las aristas vamos a necesitar la transformación de cada nodo
-        # partimos con la transformación del nodo raíz
-        transformations = {self.root_key: self.nodes[self.root_key]["transform"]}
+        # Calcular transformaciones globales si es necesario
+        if recalculate_transforms or not self.global_transforms:
+            self.calculate_global_transforms()
 
-        for src, dst in edges:
-            current_node = self.nodes[dst]
-
-            if not dst in transformations:
-                dst_transform = current_node["transform"]
-
-                if (
-                    "instance_attributes" in current_node
-                    and "transform" in current_node["instance_attributes"]
-                ):
-                    dst_transform = (
-                        dst_transform @ current_node["instance_attributes"]["transform"]
-                    )
-
-                transformations[dst] = transformations[src] @ dst_transform
-
+        for node_key, current_node in self.nodes.items():
             if "mesh" in current_node:
                 if current_node["pipeline"] is None:
                     continue
                 current_pipeline = self.pipelines[current_node["pipeline"]]
                 current_pipeline.use()
 
-                current_pipeline["transform"] = transformations[dst].reshape(
-                    16, 1, order="F"
-                )
+                 # Usar la transformación global ya calculada
+                current_pipeline["transform"] = self.global_transforms[node_key].reshape(16, 1, order="F")
 
+                # Aplicar atributos de instancia
                 if "instance_attributes" in current_node:
                     instance_attrs = current_node["instance_attributes"]
 
@@ -133,6 +122,7 @@ class Scenegraph(nx.DiGraph):
                                 current_size, 1, order="F"
                             )
 
+                # Configurar textura
                 if (
                     "texture" in current_node["mesh"]
                     and current_node["mesh"]["texture"] is not None
@@ -142,6 +132,7 @@ class Scenegraph(nx.DiGraph):
                     # esto "activa" una textura nula
                     GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
 
+                # Dibujar!
                 current_node["mesh_gpu"].draw(current_node.get("GL_TYPE"))
 
     def __add_pipeline_single_node(self, node, pipeline_name):
@@ -193,3 +184,47 @@ class Scenegraph(nx.DiGraph):
 
     def set_global_attributes(self, **attrs):
         self.global_attributes.update(attrs)
+
+    def calculate_global_transforms(self):
+        """
+        Calcula las transformaciones globales para todos los nodos del grafo
+        y las almacena en self.global_transforms.
+        """
+        self.global_transforms = {self.root_key: self.nodes[self.root_key]["transform"]}
+        
+        # tenemos que hacer un recorrido basado en profundidad (DFS).
+        # networkx provee una función que nos entrega dicho recorrido!
+        # hay que recorrerlo desde un nodo raíz, que almacenamos como atributo del grafo
+        edges = list(nx.edge_dfs(self, source=self.root_key))
+        
+        for src, dst in edges:
+            if dst not in self.global_transforms:
+                dst_transform = self.nodes[dst].get("transform", tr.identity())
+                
+                # Considerar transformaciones de instancia si existen
+                if (
+                    "instance_attributes" in self.nodes[dst]
+                    and "transform" in self.nodes[dst]["instance_attributes"]
+                ):
+                    dst_transform = dst_transform @ self.nodes[dst]["instance_attributes"]["transform"]
+                
+                self.global_transforms[dst] = self.global_transforms[src] @ dst_transform
+        
+        return self.global_transforms
+    
+    def get_global_transform(self, node_key):
+        """
+        Obtiene la transformación global para un nodo específico.
+        Si las transformaciones globales no están calculadas, las calcula primero.
+        """
+        if not self.global_transforms or node_key not in self.global_transforms:
+            self.calculate_global_transforms()
+        
+        return self.global_transforms.get(node_key, tr.identity())
+    
+    def get_global_position(self, node_key):
+        """
+        Obtiene la posición global de un nodo.
+        """
+        transform = self.get_global_transform(node_key)
+        return transform[0:3, 3]
