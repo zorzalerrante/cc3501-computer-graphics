@@ -81,10 +81,10 @@ def shadow_mapping(width, height):
     graph.add_mesh_instance("main", "cornell_box", "current_shader")
     graph.add_edge("root", "main")
     
-    # # Agregar Squirtle a la escena
-    # graph.add_mesh_instance('pokemon', 'squirtle', 'current_shader', 
-    #                        transform=tr.uniformScale(0.5))
-    # graph.add_edge('main', 'pokemon')
+    # Agregar Squirtle a la escena
+    graph.add_mesh_instance('pokemon', 'squirtle', 'current_shader', 
+                           transform=tr.uniformScale(0.5))
+    graph.add_edge('main', 'pokemon')
     
     # Crear representación visual de la luz como una esfera
     graph.add_mesh_instance(
@@ -182,6 +182,7 @@ def shadow_mapping(width, height):
     
     # Asociar textura de shadow map con nodos que necesitan proyectar sombras
     graph.add_texture_to_node('main', 'shadow_map', depth_buffer.id)
+    graph.add_texture_to_node('pokemon', 'shadow_map', depth_buffer.id)
     
     # -------------------------------------------------------------------------
     # 8. CONFIGURAR VISUALIZACIÓN DE SHADOW MAP
@@ -255,7 +256,7 @@ def shadow_mapping(width, height):
         nonlocal total_time, light_transform, view_light
         total_time += dt
 
-        #graph.nodes["pokemon"]["transform"] = tr.rotationY(total_time * 0.5)
+        graph.nodes["pokemon"]["transform"] = tr.rotationY(total_time * 0.5)
         
         # Animar posición de la luz
         base = 0.01
