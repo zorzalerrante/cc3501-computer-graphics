@@ -110,6 +110,7 @@ def disco_bunny(width, height):
 
     projection = tr.perspective(60, width / height, 0.001, 5.0)
 
+    graph.register_view_transform(view)
     # agregamos la vista y la proyección a nuestro estado de programa
     total_time = 0.0
 

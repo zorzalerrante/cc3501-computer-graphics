@@ -65,6 +65,8 @@ def arcball_example(filename, width, height):
     projection = tr.perspective(45, float(width) / float(height), near_plane, far_plane)
     view = tr.lookAt(np.array([0, 0, 2]), np.array([0, 0, 0]), np.array([0, 1, 0]))
 
+    graph.register_view_transform(view)
+
     # instanciamos nuestra Arcball
     arcball = Arcball(
         np.linalg.inv(view),
@@ -124,7 +126,7 @@ def arcball_example(filename, width, height):
         graph.nodes["root"]["transform"] = np.linalg.inv(arcball.pose)
 
         graph.set_global_attributes(
-            view=view, projection=projection, far_plane=far_plane, near_plane=near_plane
+            projection=projection, far_plane=far_plane, near_plane=near_plane
         )
 
         graph.render()

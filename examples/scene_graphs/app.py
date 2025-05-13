@@ -85,6 +85,9 @@ def solar_system(width, height):
     view = tr.lookAt(np.array([5, 5, 5]), np.array([0, 0, 0]), np.array([0, 1, 0]))
     projection = tr.perspective(45, float(width) / float(height), 0.1, 100)
 
+    graph.register_view_transform(view)
+    graph.set_global_attributes(projection=projection)
+
     @window.event
     def on_draw():
         GL.glClearColor(0.1, 0.1, 0.1, 1.0)
@@ -93,14 +96,6 @@ def solar_system(width, height):
         GL.glEnable(GL.GL_DEPTH_TEST)
 
         window.clear()
-
-        # configuramos la vista y proyección de los pipelines
-        # estas no cambian durante el programa. de hecho pudimos hacerlo antes
-        solar_pipeline["view"] = view.reshape(16, 1, order="F")
-        solar_pipeline["projection"] = projection.reshape(16, 1, order="F")
-
-        axis_pipeline["view"] = view.reshape(16, 1, order="F")
-        axis_pipeline["projection"] = projection.reshape(16, 1, order="F")
 
         graph.render()
 
