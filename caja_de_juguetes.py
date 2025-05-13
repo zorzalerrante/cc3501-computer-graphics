@@ -59,9 +59,11 @@ from examples.collision_detection.dino_runner import dino_game
 grafica_cli.add_command(dino_game)
 
 
-
 from examples.hello_opengl import hola_opengl
 grafica_cli.add_command(hola_opengl)
+
+from examples.shadows import shadow_mapping
+grafica_cli.add_command(shadow_mapping)
 
 from examples.projection.app import projection_example
 grafica_cli.add_command(projection_example)
