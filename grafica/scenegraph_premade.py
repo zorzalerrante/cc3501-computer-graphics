@@ -47,7 +47,7 @@ def rectangle_2d(id=None, parent=None, texture=None):
         'object': None,
     }
 
-    if texture:
+    if texture is not None:
         node['attributes']['uv'] = uv
         node['mesh']['texture'] = texture.id
         node['has_texture'] = True

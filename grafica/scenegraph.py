@@ -18,18 +18,40 @@ class Scenegraph(nx.DiGraph):
 
         self.meshes = {}
         self.pipelines = {}
-        self.global_attributes = {}
+        self.global_attributes = {"projection": tr.identity()}
         self.global_transforms = {}
+        self.views = {None: tr.identity()}
+        self.current_view = None
+        self.view_parameter_name = 'view'
+
+    def load_and_register_pipeline(
+        self, name, vertex_program_path, fragment_program_path
+    ):
+        with open(vertex_program_path) as f:
+            vertex_source_code = f.read()
+
+        # y el shader de píxeles solo lee el color correspondiente al píxel
+        with open(fragment_program_path) as f:
+            fragment_source_code = f.read()
+
+        vert_shader = pyglet.graphics.shader.Shader(vertex_source_code, "vertex")
+        frag_shader = pyglet.graphics.shader.Shader(fragment_source_code, "fragment")
+        pipeline = pyglet.graphics.shader.ShaderProgram(vert_shader, frag_shader)
+        self.register_pipeline(name, pipeline)
 
     def register_pipeline(self, name, pipeline):
         self.pipelines[name] = pipeline
 
+    def register_view_transform(self, view_transform, name='default', set_as_current=True):
+        self.views[name] = view_transform
+        if set_as_current:
+            self.current_view = name
+
     def add_transform(self, name, transform):
-        print(name, transform)
         self.add_node(name, transform=transform)
 
-    def load_and_register_mesh(self, name, filename, rezero=True, normalize=True):
-        self.meshes[name] = _node_from_file(filename, name)
+    def load_and_register_mesh(self, name, filename, **kwargs):
+        self.meshes[name] = _node_from_file(filename, name, **kwargs)
 
     def register_mesh(self, name, mesh):
         self.meshes[name] = mesh
@@ -56,7 +78,7 @@ class Scenegraph(nx.DiGraph):
     def render(self, recalculate_transforms=True, **pipeline_attrs):
         """
         Renderiza el grafo de escena.
-        
+
         Parámetros:
         recalculate_transforms -- Si es True, recalcula las transformaciones globales
         **pipeline_attrs -- Atributos adicionales para las pipelines
@@ -64,9 +86,17 @@ class Scenegraph(nx.DiGraph):
         # por cada pipeline, configuramos sus atributos uniform
         for pipeline_name, pipeline in self.pipelines.items():
             pipeline.use()
+            
+            # configura la cámara (mat4)
+            # si no se ha indicado una, utiliza la identidad
+            try:
+                pipeline[self.view_parameter_name] = self.views[self.current_view].reshape(16, 1, order="F")
+            # esto sucederá si el shader no tiene el parámetro de vista
+            except pyglet.graphics.shader.ShaderException as e:
+                raise(e)
+
 
             for attr, value in self.global_attributes.items():
-                # print(f"setting {attr} with {value}, type: {type(value)}")
                 if not (type(value) == float or type(value) == int):
                     size = value.shape[0]
 
@@ -79,7 +109,7 @@ class Scenegraph(nx.DiGraph):
                 # (pero no logré hacerlo de otra forma)
                 try:
                     pipeline[attr] = value
-                except pyglet.graphics.shader.ShaderException:
+                except pyglet.graphics.shader.ShaderException as e:
                     continue
 
             pipeline.stop()
@@ -95,8 +125,10 @@ class Scenegraph(nx.DiGraph):
                 current_pipeline = self.pipelines[current_node["pipeline"]]
                 current_pipeline.use()
 
-                 # Usar la transformación global ya calculada
-                current_pipeline["transform"] = self.global_transforms[node_key].reshape(16, 1, order="F")
+                # Usar la transformación global ya calculada
+                current_pipeline["transform"] = self.global_transforms[
+                    node_key
+                ].reshape(16, 1, order="F")
 
                 # Aplicar atributos de instancia
                 if "instance_attributes" in current_node:
@@ -122,15 +154,37 @@ class Scenegraph(nx.DiGraph):
                                 current_size, 1, order="F"
                             )
 
-                # Configurar textura
+                # Configurar texturas: primero la textura por defecto (mantener compatibilidad)
+                initial_texture_unit = 0
                 if (
                     "texture" in current_node["mesh"]
                     and current_node["mesh"]["texture"] is not None
                 ):
+                    GL.glActiveTexture(GL.GL_TEXTURE0)
                     GL.glBindTexture(GL.GL_TEXTURE_2D, current_node["mesh"]["texture"])
+                    initial_texture_unit = 1
+                    # try:
+                    #     current_pipeline["diffuse_texture"] = 0
+                    # except pyglet.graphics.shader.ShaderException:
+                    #     pass
                 else:
-                    # esto "activa" una textura nula
+                    GL.glActiveTexture(GL.GL_TEXTURE0)
                     GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
+                
+                # Configurar texturas adicionales usando enumerate
+                if 'textures' in current_node["mesh"]:
+                    for i, (tex_name, tex_id) in enumerate(current_node["mesh"]["textures"].items(), initial_texture_unit):
+                        if tex_name == 'diffuse':  # Saltar 'diffuse' que ya se manejó arriba
+                            continue
+                            
+                        GL.glActiveTexture(GL.GL_TEXTURE0 + i)
+                        GL.glBindTexture(GL.GL_TEXTURE_2D, tex_id)
+                        
+                        # Intentar configurar el uniform en el shader
+                        try:
+                            current_pipeline[tex_name] = i
+                        except pyglet.graphics.shader.ShaderException:
+                            pass
 
                 # Dibujar!
                 current_node["mesh_gpu"].draw(current_node.get("GL_TYPE"))
@@ -191,27 +245,32 @@ class Scenegraph(nx.DiGraph):
         y las almacena en self.global_transforms.
         """
         self.global_transforms = {self.root_key: self.nodes[self.root_key]["transform"]}
-        
+
         # tenemos que hacer un recorrido basado en profundidad (DFS).
         # networkx provee una función que nos entrega dicho recorrido!
         # hay que recorrerlo desde un nodo raíz, que almacenamos como atributo del grafo
         edges = list(nx.edge_dfs(self, source=self.root_key))
-        
+
         for src, dst in edges:
             if dst not in self.global_transforms:
                 dst_transform = self.nodes[dst].get("transform", tr.identity())
-                
+
                 # Considerar transformaciones de instancia si existen
                 if (
                     "instance_attributes" in self.nodes[dst]
                     and "transform" in self.nodes[dst]["instance_attributes"]
                 ):
-                    dst_transform = dst_transform @ self.nodes[dst]["instance_attributes"]["transform"]
-                
-                self.global_transforms[dst] = self.global_transforms[src] @ dst_transform
-        
+                    dst_transform = (
+                        dst_transform
+                        @ self.nodes[dst]["instance_attributes"]["transform"]
+                    )
+
+                self.global_transforms[dst] = (
+                    self.global_transforms[src] @ dst_transform
+                )
+
         return self.global_transforms
-    
+
     def get_global_transform(self, node_key):
         """
         Obtiene la transformación global para un nodo específico.
@@ -219,12 +278,75 @@ class Scenegraph(nx.DiGraph):
         """
         if not self.global_transforms or node_key not in self.global_transforms:
             self.calculate_global_transforms()
-        
+
         return self.global_transforms.get(node_key, tr.identity())
-    
+
     def get_global_position(self, node_key):
         """
         Obtiene la posición global de un nodo.
         """
         transform = self.get_global_transform(node_key)
         return transform[0:3, 3]
+
+    def add_texture_to_node(self, node_key, texture_name, texture_id):
+        """
+        Agrega una textura adicional a un nodo y sus hijos, si existen.
+        
+        Parámetros:
+        node_key -- La clave del nodo
+        texture_name -- Nombre identificador de la textura (ej: 'shadow_map')
+        texture_id -- ID de la textura de OpenGL
+        """
+        node = self.nodes[node_key]
+        
+        # Función auxiliar para agregar textura a un solo nodo
+        def _add_texture_to_single_node(current_node):
+            if 'mesh' not in current_node or current_node['mesh'] is None:
+                return False
+            
+            if 'textures' not in current_node['mesh']:
+                current_node['mesh']['textures'] = {}
+            
+            current_node['mesh']['textures'][texture_name] = texture_id
+            return True
+        
+        # Primero intentamos agregar al nodo principal
+        added_to_main = _add_texture_to_single_node(node)
+        
+        # Ahora buscamos los hijos del nodo en el grafo
+        children = list(self.successors(node_key))
+        for child_key in children:
+            _add_texture_to_single_node(self.nodes[child_key])
+        
+        # Si el nodo tiene información sobre sus "children" (en su estructura interna)
+        if 'children' in node and node['children']:
+            for child in node['children']:
+                _add_texture_to_single_node(child)
+        
+        # Si no se agregó al nodo principal ni se encontraron hijos, advertir
+        if not added_to_main and not children and (not 'children' in node or not node['children']):
+            print(f"Advertencia: No se pudo agregar textura '{texture_name}' al nodo '{node_key}', no tiene malla ni hijos.")
+
+    def remove_texture_from_node(self, node_key, texture_name):
+        """
+        Elimina una textura específica de un nodo y sus hijos.
+        """
+        node = self.nodes[node_key]
+        
+        # Función auxiliar para eliminar textura de un solo nodo
+        def _remove_texture_from_single_node(current_node):
+            if 'mesh' in current_node and current_node['mesh'] and 'textures' in current_node['mesh']:
+                if texture_name in current_node['mesh']['textures']:
+                    del current_node['mesh']['textures'][texture_name]
+        
+        # Eliminar del nodo principal
+        _remove_texture_from_single_node(node)
+        
+        # Eliminar de los hijos en el grafo
+        for child_key in self.successors(node_key):
+            _remove_texture_from_single_node(self.nodes[child_key])
+        
+        # Eliminar de los "children" internos
+        if 'children' in node and node['children']:
+            for child in node['children']:
+                _remove_texture_from_single_node(child)
