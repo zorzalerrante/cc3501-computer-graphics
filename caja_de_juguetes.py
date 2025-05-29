@@ -65,6 +65,9 @@ grafica_cli.add_command(hola_opengl)
 from examples.shadows import shadow_mapping
 grafica_cli.add_command(shadow_mapping)
 
+from examples.terrain import terrain_generation
+grafica_cli.add_command(terrain_generation)
+
 from examples.projection.app import projection_example
 grafica_cli.add_command(projection_example)
 
