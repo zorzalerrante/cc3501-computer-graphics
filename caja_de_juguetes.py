@@ -58,6 +58,8 @@ grafica_cli.add_command(boids.boids_abm)
 from examples.collision_detection.dino_runner import dino_game
 grafica_cli.add_command(dino_game)
 
+from examples.ray_triangle import ray_triangle_example
+grafica_cli.add_command(ray_triangle_example)
 
 from examples.hello_opengl import hola_opengl
 grafica_cli.add_command(hola_opengl)
