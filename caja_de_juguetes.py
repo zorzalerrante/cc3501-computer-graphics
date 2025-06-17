@@ -91,5 +91,8 @@ grafica_cli.add_command(transformed_bunny)
 from examples.disco_bunny.app import disco_bunny
 grafica_cli.add_command(disco_bunny)
 
+from examples.camera_path import camera_path
+grafica_cli.add_command(camera_path)
+
 if __name__ == '__main__':
     grafica_cli()
