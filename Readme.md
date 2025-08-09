@@ -1,6 +1,6 @@
 # Computación Gráfica y Modelamiento para ingenieros e ingenieras (CC3501)
 
-Este repositorio contiene el código asociado al curso. 
+**Este repositorio está desactualizado. El nuevo es https://github.com/PLUMAS-research/cc3501-computer-graphics** 
 
 ## Instalación
 
