@@ -11,7 +11,7 @@ import click
 @click.argument("filename", type=str)
 @click.option("--width", type=int, default=320)
 @click.option("--height", type=int, default=280)
-def raytacing_cpu(filename, width, height):
+def raytracing_cpu(filename, width, height):
     #NUEVO: Cargamos el modelo 3D
     charmander = tm.load("assets/Charmander.STL", force= "mesh")
     squirtle = tm.load("assets/Squirtle.STL", force= "mesh")

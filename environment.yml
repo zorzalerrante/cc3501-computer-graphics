@@ -17,6 +17,8 @@ dependencies:
   - shapely
   - rtree
   - click
+  - pyvista
+  - sympy
   - pip:
     - pyglet>=2.0.0
     - pymunk

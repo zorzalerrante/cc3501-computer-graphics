@@ -23,6 +23,7 @@ class Scenegraph(nx.DiGraph):
         self.views = {None: tr.identity()}
         self.current_view = None
         self.view_parameter_name = 'view'
+        self.transform_parameter_name = 'transform'
 
     def load_and_register_pipeline(
         self, name, vertex_program_path, fragment_program_path
@@ -93,7 +94,7 @@ class Scenegraph(nx.DiGraph):
                 pipeline[self.view_parameter_name] = self.views[self.current_view].reshape(16, 1, order="F")
             # esto sucederá si el shader no tiene el parámetro de vista
             except pyglet.graphics.shader.ShaderException as e:
-                raise(e)
+                pass
 
 
             for attr, value in self.global_attributes.items():
@@ -126,9 +127,12 @@ class Scenegraph(nx.DiGraph):
                 current_pipeline.use()
 
                 # Usar la transformación global ya calculada
-                current_pipeline["transform"] = self.global_transforms[
-                    node_key
-                ].reshape(16, 1, order="F")
+                try:
+                    current_pipeline[self.transform_parameter_name] = self.global_transforms[
+                        node_key
+                    ].reshape(16, 1, order="F")
+                except pyglet.graphics.shader.ShaderException as e:
+                    pass 
 
                 # Aplicar atributos de instancia
                 if "instance_attributes" in current_node:
